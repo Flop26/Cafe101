@@ -30,7 +30,9 @@ app.get('/api/state', async (_request, response, next) => {
         mi.Description,
         mi.Price,
         mi.Availability,
+        mi.Image_URI,
         c.Category_Name,
+        c.Supports_Size,
         ri.Recipe_ID,
         ri.Inventory_ID,
         ri.Required_Quantity,
@@ -43,10 +45,12 @@ app.get('/api/state', async (_request, response, next) => {
       ORDER BY mi.Menu_Item_ID, ri.Recipe_ID
     `);
     const [inventoryRows] = await pool.query('SELECT * FROM Inventory ORDER BY Inventory_ID');
+    const [categoryRows] = await pool.query('SELECT * FROM Category ORDER BY Category_ID');
 
     response.json({
       menuItems: buildMenuItems(menuRows),
       inventoryItems: inventoryRows.map(inventoryFromRow),
+      categories: categoryRows.map(categoryFromRow),
     });
   } catch (error) {
     next(error);
@@ -85,7 +89,20 @@ app.put('/api/menu/:id', async (request, response, next) => {
 
 app.delete('/api/menu/:id', async (request, response, next) => {
   try {
-    await pool.query('DELETE FROM Menu_Item WHERE Menu_Item_ID = ?', [request.params.id]);
+    const itemId = request.params.id;
+    const [orderRows] = await pool.query(
+      'SELECT COUNT(*) AS count FROM Orders_Item WHERE Menu_Item_ID = ?',
+      [itemId],
+    );
+
+    // Items with order history are archived so past receipts stay intact
+    if (Number(orderRows[0].count) > 0) {
+      await pool.query('UPDATE Menu_Item SET Availability = 0 WHERE Menu_Item_ID = ?', [itemId]);
+      return response.sendStatus(204);
+    }
+
+    await pool.query('DELETE FROM Recipe_Item WHERE Menu_Item_ID = ?', [itemId]);
+    await pool.query('DELETE FROM Menu_Item WHERE Menu_Item_ID = ?', [itemId]);
     response.sendStatus(204);
   } catch (error) {
     next(error);
@@ -97,6 +114,23 @@ app.patch('/api/inventory/:id', async (request, response, next) => {
     await saveInventoryItem(pool, request.params.id, request.body);
     response.sendStatus(204);
   } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/inventory/:id', async (request, response, next) => {
+  try {
+    const id = String(request.params.id || '').trim();
+    const [recipes] = await pool.query('SELECT COUNT(*) AS count FROM Recipe_Item WHERE Inventory_ID = ?', [id]);
+    if (recipes[0].count > 0) {
+      return response.status(409).json({ message: 'This item is used in a recipe. Remove it from the recipe first.' });
+    }
+    await pool.query('DELETE FROM Inventory WHERE Inventory_ID = ?', [id]);
+    response.sendStatus(204);
+  } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return response.status(409).json({ message: 'This item has spillage records and cannot be deleted.' });
+    }
     next(error);
   }
 });
@@ -200,6 +234,75 @@ app.post('/api/spillage', async (request, response, next) => {
   }
 });
 
+app.get('/api/categories', async (_request, response, next) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM Category ORDER BY Category_ID');
+    response.json(rows.map(categoryFromRow));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/categories', async (request, response, next) => {
+  try {
+    const name = String(request.body.name || '').trim();
+    const description = String(request.body.description || '').trim();
+    const supportsSize = Boolean(request.body.supportsSize);
+    if (!name) return response.status(400).json({ message: 'Category name is required.' });
+
+    const [result] = await pool.query(
+      'INSERT INTO Category (Category_Name, Description, Supports_Size) VALUES (?, ?, ?)',
+      [name, description || `${name} menu items`, supportsSize ? 1 : 0],
+    );
+    response.status(201).json({ id: result.insertId, name, description: description || `${name} menu items`, supportsSize });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return response.status(409).json({ message: `Category "${request.body.name}" already exists.` });
+    }
+    next(error);
+  }
+});
+
+app.put('/api/categories/:id', async (request, response, next) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM Category WHERE Category_ID = ?', [Number(request.params.id)]);
+    if (!rows.length) return response.status(404).json({ message: 'Category not found.' });
+    const existing = rows[0];
+
+    const name = String(request.body.name ?? existing.Category_Name).trim();
+    const description = String(request.body.description ?? existing.Description ?? '').trim();
+    const supportsSize = request.body.supportsSize === undefined
+      ? Boolean(existing.Supports_Size)
+      : Boolean(request.body.supportsSize);
+    if (!name) return response.status(400).json({ message: 'Category name is required.' });
+
+    await pool.query(
+      'UPDATE Category SET Category_Name = ?, Description = ?, Supports_Size = ? WHERE Category_ID = ?',
+      [name, description || `${name} menu items`, supportsSize ? 1 : 0, existing.Category_ID],
+    );
+    response.sendStatus(204);
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return response.status(409).json({ message: `Category "${request.body.name}" already exists.` });
+    }
+    next(error);
+  }
+});
+
+app.delete('/api/categories/:id', async (request, response, next) => {
+  try {
+    const categoryId = Number(request.params.id);
+    const [items] = await pool.query('SELECT COUNT(*) AS count FROM Menu_Item WHERE Category_ID = ?', [categoryId]);
+    if (items[0].count > 0) {
+      return response.status(409).json({ message: 'Cannot delete a category that still has menu items. Remove or reassign items first.' });
+    }
+    await pool.query('DELETE FROM Category WHERE Category_ID = ?', [categoryId]);
+    response.sendStatus(204);
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get('/health', async (_request, response) => {
   try {
     await pool.query('SELECT 1');
@@ -228,11 +331,11 @@ function buildMenuItems(rows) {
         description: row.Description || '',
         price: Number(row.Price),
         accent: getCategoryAccent(row.Category_Name),
-        options: getOptionType(row.Category_Name),
+        options: getOptionType(row.Category_Name, row.Supports_Size),
         ingredients: [],
         measurementAmount: null,
         measurementUnit: null,
-        imageUri: '',
+        imageUri: row.Image_URI || '',
         availability: Boolean(row.Availability),
       });
     }
@@ -260,6 +363,15 @@ function inventoryFromRow(row) {
   };
 }
 
+function categoryFromRow(row) {
+  return {
+    id: row.Category_ID,
+    name: row.Category_Name,
+    description: row.Description || '',
+    supportsSize: Boolean(row.Supports_Size),
+  };
+}
+
 async function saveMenuItem(connection, rawItem) {
   const ingredients = getValidIngredients(rawItem.ingredients);
   const item = {
@@ -267,6 +379,7 @@ async function saveMenuItem(connection, rawItem) {
     name: String(rawItem.name || '').trim(),
     category: String(rawItem.category || '').trim(),
     description: String(rawItem.description || '').trim(),
+    imageUri: String(rawItem.imageUri || '').trim(),
     price: Number.parseFloat(rawItem.price),
     availability: rawItem.availability === undefined ? 1 : Number(Boolean(rawItem.availability)),
     ingredients,
@@ -278,10 +391,10 @@ async function saveMenuItem(connection, rawItem) {
 
   const categoryId = await ensureCategory(connection, item.category);
   await connection.query(
-    `INSERT INTO Menu_Item (Menu_Item_ID, Category_ID, Item_Name, Description, Price, Availability)
-     VALUES (?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE Category_ID = VALUES(Category_ID), Item_Name = VALUES(Item_Name), Description = VALUES(Description), Price = VALUES(Price), Availability = VALUES(Availability)`,
-    [item.id, categoryId, item.name, item.description, item.price, item.availability],
+    `INSERT INTO Menu_Item (Menu_Item_ID, Category_ID, Item_Name, Description, Price, Availability, Image_URI)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE Category_ID = VALUES(Category_ID), Item_Name = VALUES(Item_Name), Description = VALUES(Description), Price = VALUES(Price), Availability = VALUES(Availability), Image_URI = VALUES(Image_URI)`,
+    [item.id, categoryId, item.name, item.description, item.price, item.availability, item.imageUri || null],
   );
 
   await connection.query('DELETE FROM Recipe_Item WHERE Menu_Item_ID = ?', [item.id]);
@@ -421,10 +534,10 @@ function getInventoryKey(name, unit) {
   return `${String(name).trim().toLowerCase()}-${String(unit).trim().toLowerCase()}`;
 }
 
-function getOptionType(category) {
+function getOptionType(category, supportsSize) {
   if (category === 'Coffee') return 'coffee';
   if (category === 'Sodas') return 'coldDrink';
-  return 'none';
+  return supportsSize ? 'size' : 'none';
 }
 
 function getCategoryAccent(category) {

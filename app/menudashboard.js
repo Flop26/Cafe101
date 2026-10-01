@@ -3,8 +3,8 @@ import { Image, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, Te
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMenu } from './menucontext';
+import { getUnitPrice, getOptionType } from '../utils/pricing';
 
-const categories = ['All items', 'Coffee', 'Meals', 'Snacks', 'Sodas'];
 const navItems = [
 	{ key: 'home', label: 'Home Page' },
 	{ key: 'inventory', label: 'Inventory' },
@@ -13,7 +13,16 @@ const navItems = [
 ];
 
 export default function MenuDashboard() {
-	const { menuItems, inventoryItems, createPendingOrder, lastCompletedOrder } = useMenu();
+	const { menuItems: rawMenuItems = [], inventoryItems, categories: menuCategories = [], createPendingOrder, lastCompletedOrder } = useMenu();
+
+	// Always derive size options from the category's current settings
+	const menuItems = useMemo(
+		() => rawMenuItems
+			.filter((item) => item.availability !== false)
+			.map((item) => ({ ...item, options: getOptionType(item.category, menuCategories) })),
+		[rawMenuItems, menuCategories],
+	);
+	const categoryFilters = ['All items', ...menuCategories.map((category) => category.name)];
 	const [activeCategory, setActiveCategory] = useState('All items');
 	const [searchQuery, setSearchQuery] = useState('');
 	const [cart, setCart] = useState({});
@@ -46,7 +55,10 @@ export default function MenuDashboard() {
 
 	const orderItems = menuItems.filter((item) => cart[item.id]);
 	const itemCount = orderItems.reduce((total, item) => total + cart[item.id], 0);
-	const subtotal = orderItems.reduce((total, item) => total + item.price * cart[item.id], 0);
+	const subtotal = orderItems.reduce(
+		(total, item) => total + getUnitPrice(item, customizations[item.id] || getDefaultCustomization(item)) * cart[item.id],
+		0,
+	);
 
 	useEffect(() => {
 		if (!lastCompletedOrder) return;
@@ -171,9 +183,12 @@ export default function MenuDashboard() {
 		<SafeAreaView style={styles.safeArea}>
 			<StatusBar style="dark" />
 			<View style={styles.shell}>
-				{/* Left navigation rail */}
 				<View style={styles.sidebar}>
-					<Text style={styles.brand}>Cafe101</Text>
+					<Image
+						source={require('../assets/cafe101logo.png')}
+						style={styles.logo}
+						resizeMode="contain"
+					/>
 					<View style={styles.navList}>
 						{navItems.map((nav) => (
 							<Pressable
@@ -212,7 +227,7 @@ export default function MenuDashboard() {
 					/>
 
 					<ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-						{categories.map((category) => (
+						{categoryFilters.map((category) => (
 							<Pressable
 								key={category}
 								onPress={() => setActiveCategory(category)}
@@ -223,73 +238,65 @@ export default function MenuDashboard() {
 						))}
 					</ScrollView>
 
-					<Text style={styles.menuTitle}>{activeCategory === 'All items' ? 'Full menu' : `${activeCategory} menu`}</Text>
+					<Text style={styles.menuTitle}>{activeCategory === 'All items' ? '  Menu' : `${activeCategory} menu`}</Text>
 
 					<View style={styles.menuGrid}>
 						{visibleItems.map((item) => {
 							const canAddItem = canMakeItem(item, (cart[item.id] || 0) + 1);
 							const hasAnyStock = canMakeItem(item);
-							const hasSizes = item.options === 'coffee' || item.options === 'coldDrink';
-							const sizeOptions = item.options === 'coffee' ? ['S', 'M', 'L'] : item.options === 'coldDrink' ? ['R', 'L'] : [];
+							const hasSizes = ['coffee', 'coldDrink', 'size'].includes(item.options);
+							const sizeOptions = item.options === 'coldDrink' ? ['R', 'L'] : ['S', 'M', 'L'];
 							const activeSize = (customizations[item.id] || getDefaultCustomization(item)).size;
 
 							return (
 								<Pressable key={item.id} onPress={() => openItemEditor(item.id)} style={styles.menuCard}>
-									{item.imageUri ? (
-										<Image source={{ uri: item.imageUri }} style={styles.itemImage} />
-									) : (
-										<View style={[styles.itemIcon, { backgroundColor: item.accent }]}>
-											<Text style={styles.itemIconText}>{item.name.charAt(0)}</Text>
+									{/* Left: image + quantity */}
+									<View style={styles.cardLeft}>
+										<View style={styles.imageBox}>
+											{item.imageUri ? (
+												<Image source={{ uri: item.imageUri }} style={styles.itemImage} resizeMode="contain" />
+											) : (
+												<View style={[styles.itemIcon, { backgroundColor: item.accent }]}>
+													<Text style={styles.itemIconText}>{item.name.charAt(0)}</Text>
+												</View>
+											)}
 										</View>
-									)}
-									<Text style={styles.itemName}>{item.name}</Text>
-									<Text style={styles.itemDescription} numberOfLines={2}>{item.description}</Text>
-									{!hasAnyStock ? <Text style={styles.stockHint}>Out of stock</Text> : null}
-
-									<View style={styles.cardRow}>
-										<Text style={styles.price}>₱{item.price.toFixed(2)}</Text>
-										{hasSizes ? (
-											<View style={styles.sizeRow}>
-												{sizeOptions.map((size) => {
-													const fullSize = size === 'S' ? 'Small' : size === 'M' ? 'Medium' : size === 'L' ? 'Large' : size === 'R' ? 'Regular' : size;
-													return (
-														<Pressable
-															key={size}
-															onPress={(event) => { event.stopPropagation(); quickSetSize(item, fullSize); }}
-															style={[styles.sizeButton, activeSize === fullSize && styles.sizeButtonActive]}
-														>
-															<Text style={[styles.sizeText, activeSize === fullSize && styles.sizeTextActive]}>{size}</Text>
-														</Pressable>
-													);
-												})}
-											</View>
-										) : null}
+										<View style={styles.countButtonsWrap}>
+										</View>
 									</View>
 
-									<View style={styles.ctaRow}>
-										<View style={styles.countButtonsWrap}>
-											<Pressable
-												disabled={!cart[item.id]}
-												onPress={(event) => { event.stopPropagation(); changeQuantity(item.id, -1); }}
-												style={[styles.countButton, !cart[item.id] && styles.countButtonDisabled]}
-											>
-												<Text style={styles.countText}>-</Text>
-											</Pressable>
-											<Text style={styles.countValue}>{cart[item.id] || 0}</Text>
-											<Pressable
-												disabled={!canAddItem}
-												onPress={(event) => { event.stopPropagation(); changeQuantity(item.id, 1); }}
-												style={[styles.countButton, !canAddItem && styles.countButtonDisabled]}
-											>
-												<Text style={styles.countText}>+</Text>
-											</Pressable>
+									{/* Right: name, description, price + size, add order */}
+									<View style={styles.cardRight}>
+										<Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+										<Text style={styles.itemDescription} numberOfLines={2}>{item.description}</Text>
+										{!hasAnyStock ? <Text style={styles.stockHint}>Out of stock</Text> : null}
+
+										<View style={styles.cardRow}>
+											<Text style={styles.price}>₱{getUnitPrice(item, { size: activeSize }).toFixed(2)}</Text>
+											{hasSizes ? (
+												<View style={styles.sizeRow}>
+													{sizeOptions.map((size) => {
+														const fullSize = size === 'S' ? 'Small' : size === 'M' ? 'Medium' : size === 'L' ? 'Large' : size === 'R' ? 'Regular' : size;
+														return (
+															<Pressable
+																key={size}
+																onPress={(event) => { event.stopPropagation(); quickSetSize(item, fullSize); }}
+																style={[styles.sizeButton, activeSize === fullSize && styles.sizeButtonActive]}
+															>
+																<Text style={[styles.sizeText, activeSize === fullSize && styles.sizeTextActive]}>{size}</Text>
+															</Pressable>
+														);
+													})}
+												</View>
+											) : null}
 										</View>
+
 										<Pressable
 											disabled={!canAddItem}
 											onPress={(event) => { event.stopPropagation(); changeQuantity(item.id, 1); }}
 											style={[styles.addButton, !canAddItem && styles.addButtonDisabled]}
 										>
-											<Text style={styles.addButtonText}>Add Order + </Text>
+											<Text style={styles.addButtonText}>Add Order +</Text>
 										</Pressable>
 									</View>
 								</Pressable>
@@ -301,7 +308,7 @@ export default function MenuDashboard() {
 				{/* Right cart panel */}
 				<View style={styles.cartPanel}>
 					<View style={styles.cartHeader}>
-						<Text style={styles.cartTitle}>Cart</Text>
+						<Text style={styles.cartTitle}>  Order</Text>
 						<Text style={styles.cartOrderNumber}>{lastCompletedOrder ? lastCompletedOrder.orderNumber : 'Order #1'}</Text>
 					</View>
 
@@ -314,7 +321,9 @@ export default function MenuDashboard() {
 								<Pressable key={item.id} onPress={() => openItemEditor(item.id)} style={styles.cartItem}>
 									<View style={styles.cartItemTop}>
 										<Text style={styles.cartItemName}>{item.name}</Text>
-										<Text style={styles.cartItemPrice}>₱{(item.price * cart[item.id]).toFixed(2)}</Text>
+										<Text style={styles.cartItemPrice}>
+											₱{(getUnitPrice(item, custom || getDefaultCustomization(item)) * cart[item.id]).toFixed(2)}
+										</Text>
 									</View>
 									{custom?.size ? <Text style={styles.cartItemMeta}>{custom.size}{custom.milk ? ` · ${custom.milk}` : ''}{custom.ice ? ` · ${custom.ice} ice` : ''}</Text> : null}
 									{notes[item.id] ? <Text style={styles.cartItemMeta}>Note: {notes[item.id]}</Text> : null}
@@ -325,7 +334,7 @@ export default function MenuDashboard() {
 									</View>
 								</Pressable>
 							);
-						}) : <Text style={styles.emptyOrder}>Tap a menu item to build an order.</Text>}
+						}) : <Text style={styles.emptyOrder}>Select a menu item.</Text>}
 					</ScrollView>
 
 					<View style={styles.totalRow}>
@@ -357,12 +366,20 @@ export default function MenuDashboard() {
 									<Text style={styles.inventorySummaryValue}>{sortedInventoryItems.length}</Text>
 									<Text style={styles.inventorySummaryLabel}>TRACKED INGREDIENTS</Text>
 								</View>
-								<Pressable
-									onPress={() => { setStaffPanel(null); router.push('/modifyinventory'); }}
-									style={styles.modifyStockButton}
-								>
-									<Text style={styles.modifyStockButtonText}>Modify Inventory Stock</Text>
-								</Pressable>
+								<View style={styles.inventoryActions}>
+									<Pressable
+										onPress={() => { setStaffPanel(null); router.push('/modifyinventory'); }}
+										style={styles.modifyStockButton}
+									>
+										<Text style={styles.modifyStockButtonText}>Modify Inventory Stock</Text>
+									</Pressable>
+									<Pressable
+										onPress={() => { setStaffPanel(null); router.push('/spillagelog'); }}
+										style={styles.spillageButton}
+									>
+										<Text style={styles.spillageButtonText}>Log Spillage</Text>
+									</Pressable>
+								</View>
 								<ScrollView style={styles.reportList} showsVerticalScrollIndicator={false}>
 									{sortedInventoryItems.map((item) => {
 										const status = getStockStatus(item);
@@ -372,7 +389,6 @@ export default function MenuDashboard() {
 												<View style={styles.inventoryTopRow}>
 													<View style={styles.inventoryNameBlock}>
 														<Text style={styles.reportName}>{item.name}</Text>
-														<Text style={styles.inventoryMeta}>Restock at {formatStockQuantity(item.reorderPoint, item.unit)}</Text>
 													</View>
 													<Text style={styles.reportQuantity}>{formatStockQuantity(item.quantity, item.unit)}</Text>
 												</View>
@@ -412,9 +428,22 @@ export default function MenuDashboard() {
 						<Text style={styles.editorLabel}>QUANTITY</Text>
 						<View style={styles.editorQuantityRow}>
 							<Pressable onPress={() => selectedItemId && changeQuantity(selectedItemId, -1)} style={styles.editorQuantityButton}><Text style={styles.editorQuantityText}>-</Text></Pressable>
-							<Text style={styles.editorQuantity}>{selectedItemId ? cart[selectedItemId] : 0}</Text>
+							<Text style={styles.editorQuantity}>{selectedItemId ? cart[selectedItemId] || 0 : 0}</Text>
 							<Pressable disabled={!canAddSelectedItem} onPress={() => selectedItemId && changeQuantity(selectedItemId, 1)} style={[styles.editorQuantityButton, !canAddSelectedItem && styles.editorQuantityButtonDisabled]}><Text style={styles.editorQuantityText}>+</Text></Pressable>
 						</View>
+
+						{selectedItem?.options === 'size' ? (
+							<>
+								<Text style={styles.editorLabel}>SIZE</Text>
+								<View style={styles.optionRow}>
+									{['Small', 'Medium', 'Large'].map((size) => (
+										<Pressable key={size} onPress={() => updateCustomization('size', size)} style={[styles.optionButton, editCustomization.size === size && styles.optionButtonActive]}>
+											<Text style={[styles.optionText, editCustomization.size === size && styles.optionTextActive]}>{size} · ₱{getUnitPrice(selectedItem, { size }).toFixed(2)}</Text>
+										</Pressable>
+									))}
+								</View>
+							</>
+						) : null}
 
 						{selectedItem?.options === 'coffee' ? (
 							<>
@@ -422,7 +451,7 @@ export default function MenuDashboard() {
 								<View style={styles.optionRow}>
 									{['Small', 'Medium', 'Large'].map((size) => (
 										<Pressable key={size} onPress={() => updateCustomization('size', size)} style={[styles.optionButton, editCustomization.size === size && styles.optionButtonActive]}>
-											<Text style={[styles.optionText, editCustomization.size === size && styles.optionTextActive]}>{size}</Text>
+											<Text style={[styles.optionText, editCustomization.size === size && styles.optionTextActive]}>{size} · ₱{getUnitPrice(selectedItem, { size }).toFixed(2)}</Text>
 										</Pressable>
 									))}
 								</View>
@@ -443,7 +472,7 @@ export default function MenuDashboard() {
 								<View style={styles.optionRow}>
 									{['Regular', 'Large'].map((size) => (
 										<Pressable key={size} onPress={() => updateCustomization('size', size)} style={[styles.optionButton, editCustomization.size === size && styles.optionButtonActive]}>
-											<Text style={[styles.optionText, editCustomization.size === size && styles.optionTextActive]}>{size}</Text>
+											<Text style={[styles.optionText, editCustomization.size === size && styles.optionTextActive]}>{size} · ₱{getUnitPrice(selectedItem, { size }).toFixed(2)}</Text>
 										</Pressable>
 									))}
 								</View>
@@ -485,9 +514,9 @@ export default function MenuDashboard() {
 
 const colors = {
 	background: '#FFFFFF',
-	ink: '#1F1D1B',
+	ink: '#25170E',
 	muted: '#9B958D',
-	accent: '#2F6FED',
+	accent: '#dad4d4',
 	border: '#EDEAE5',
 	panel: '#FFFFFF',
 	sidebar: '#FFFFFF',
@@ -496,9 +525,11 @@ const colors = {
 	cardBg: '#FDFCFB',
 };
 
+// Default size is the BASE size (smallest), which carries the base price
 function getDefaultCustomization(item) {
-	if (item?.options === 'coffee') return { size: 'Medium', milk: 'Regular' };
+	if (item?.options === 'coffee') return { size: 'Small', milk: 'Regular' };
 	if (item?.options === 'coldDrink') return { size: 'Regular', ice: 'Regular' };
+	if (item?.options === 'size') return { size: 'Small' };
 	return {};
 }
 
@@ -547,6 +578,7 @@ const styles = StyleSheet.create({
 	resetButtonText: { color: colors.ink, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 	logoutButton: { marginBottom: 24, marginTop: 8, paddingHorizontal: 12, paddingVertical: 8 },
 	logoutButtonText: { color: '#C0503F', fontSize: 12, fontWeight: '700', textAlign: 'center' },
+	logo: { height: 140, width: 140, marginTop: -20 },
 
 	// Main panel
 	mainPanel: { flex: 1 },
@@ -554,32 +586,36 @@ const styles = StyleSheet.create({
 	searchInput: { backgroundColor: '#F7F6F4', borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.ink, fontSize: 14, marginBottom: 18, paddingHorizontal: 18, paddingVertical: 12 },
 	categoryScroll: { marginBottom: 18 },
 	categoryChip: { alignItems: 'center', borderColor: colors.chipBorder, borderRadius: 20, borderWidth: 1, justifyContent: 'center', marginRight: 8, paddingHorizontal: 18, paddingVertical: 10 },
-	categoryChipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+	categoryChipActive: { backgroundColor: '#25170E', borderColor: colors.ink },
 	categoryText: { color: '#6F6A63', fontSize: 12, fontWeight: '700' },
 	categoryTextActive: { color: '#FFFFFF' },
-	menuTitle: { color: colors.ink, fontSize: 24, fontWeight: '800', marginBottom: 16 },
+	menuTitle: { color: '#25170E', fontSize: 24, fontWeight: '800', marginBottom: 16 },
 	menuGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-	menuCard: { backgroundColor: colors.cardBg, borderColor: colors.border, borderRadius: 16, borderWidth: 1, padding: 14, width: '47%' },
-	itemImage: { borderRadius: 12, height: 96, marginBottom: 10, width: '100%' },
-	itemIcon: { alignItems: 'center', borderRadius: 12, height: 96, justifyContent: 'center', marginBottom: 10 },
+
+	// Menu card: image + quantity on the left, details on the right
+	menuCard: { backgroundColor: colors.cardBg, borderColor: colors.border, borderRadius: 16, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 14, width: '47%' },
+	cardLeft: { alignItems: 'center', gap: 10, width: 96 },
+	imageBox: { backgroundColor: '#F7F6F4', borderRadius: 12, height: 96, overflow: 'hidden', width: 96 },
+	cardRight: { flex: 1, minWidth: 0 },
+	itemImage: { height: '100%', width: '100%' },
+	itemIcon: { alignItems: 'center', borderRadius: 12, height: '100%', justifyContent: 'center', width: '100%' },
 	itemIconText: { fontSize: 30, fontWeight: '800' },
 	itemName: { color: colors.ink, fontSize: 14, fontWeight: '800', marginBottom: 2 },
 	itemDescription: { color: colors.muted, fontSize: 11, lineHeight: 15, marginBottom: 8 },
 	stockHint: { color: '#C0503F', fontSize: 10, fontWeight: '700', marginBottom: 6 },
-	cardRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+	cardRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'space-between', marginBottom: 10 },
 	price: { color: colors.ink, fontSize: 14, fontWeight: '800' },
 	sizeRow: { flexDirection: 'row', gap: 4 },
 	sizeButton: { alignItems: 'center', backgroundColor: '#F1EFEA', borderRadius: 6, height: 22, justifyContent: 'center', width: 22 },
 	sizeButtonActive: { backgroundColor: colors.ink },
 	sizeText: { color: colors.ink, fontSize: 10, fontWeight: '800' },
 	sizeTextActive: { color: '#FFFFFF' },
-	ctaRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
 	countButtonsWrap: { alignItems: 'center', flexDirection: 'row', gap: 6 },
 	countButton: { alignItems: 'center', backgroundColor: '#F1EFEA', borderRadius: 8, height: 26, justifyContent: 'center', width: 26 },
 	countButtonDisabled: { opacity: 0.4 },
 	countText: { color: colors.ink, fontSize: 15, fontWeight: '700', lineHeight: 15 },
 	countValue: { color: colors.ink, fontSize: 12, fontWeight: '800', minWidth: 14, textAlign: 'center' },
-	addButton: { alignItems: 'center', backgroundColor: colors.ink, borderRadius: 8, flex: 1, justifyContent: 'center', minHeight: 34 },
+	addButton: { alignItems: 'center', backgroundColor: colors.ink, borderRadius: 8, justifyContent: 'center', marginTop: 'auto', minHeight: 34 },
 	addButtonDisabled: { backgroundColor: '#C7C1B8' },
 	addButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
 
@@ -616,9 +652,9 @@ const styles = StyleSheet.create({
 	reportSheet: { backgroundColor: colors.panel, borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '86%', padding: 24, paddingBottom: 34 },
 	reportList: { maxHeight: 430 },
 	reportRow: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', paddingVertical: 15 },
-	reportName: { color: colors.ink, flex: 1, fontSize: 14, fontWeight: '700' },
-	reportQuantity: { color: colors.muted, fontSize: 13, fontWeight: '700', marginLeft: 10 },
-	reportStatus: { color: '#3F8A5E', fontSize: 10, fontWeight: '800', marginLeft: 12 },
+	reportName: { color: colors.ink, flex: 1, fontSize: 20, fontWeight: '700' },
+	reportQuantity: { color: colors.muted, fontSize: 15, fontWeight: '700', marginLeft: 10 },
+	reportStatus: { color: '#3F8A5E', fontSize: 15, fontWeight: '800', marginLeft: 12 },
 	lowStock: { color: '#C08A3F' },
 	outStock: { color: '#C0503F' },
 	inventorySummary: { backgroundColor: '#F1F4FE', borderRadius: 10, marginBottom: 8, padding: 16 },
@@ -629,8 +665,11 @@ const styles = StyleSheet.create({
 	inventoryNameBlock: { flex: 1 },
 	inventoryMeta: { color: colors.muted, fontSize: 11, marginTop: 4 },
 	inventoryBottomRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-	modifyStockButton: { alignItems: 'center', backgroundColor: colors.ink, borderRadius: 10, justifyContent: 'center', marginBottom: 12, minHeight: 44 },
+	inventoryActions: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+	modifyStockButton: { alignItems: 'center', backgroundColor: colors.ink, borderRadius: 10, flex: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 },
 	modifyStockButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+	spillageButton: { alignItems: 'center', backgroundColor: '#a79163', borderRadius: 10, flex: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 },
+	spillageButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
 	salesTotal: { backgroundColor: '#F1F4FE', borderRadius: 10, marginBottom: 8, padding: 16 },
 	salesTotalLabel: { color: colors.accent, fontSize: 10, fontWeight: '800', letterSpacing: 1.3 },
 	salesTotalValue: { color: colors.ink, fontSize: 30, fontWeight: '800', marginTop: 6 },

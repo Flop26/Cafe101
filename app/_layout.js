@@ -10,6 +10,9 @@ export default function RootLayout() {
 				<Stack.Screen name="menudashboard" options={{ headerShown: false }} />
 				<Stack.Screen name="modifymenu" options={{ headerShown: false }} />
 				<Stack.Screen name="ordersummary" options={{ headerShown: false }} />
+				<Stack.Screen name="modifyinventory" options={{ headerShown: false }} />
+				<Stack.Screen name="spillagelog" options={{ headerShown: false }} />
+				<Stack.Screen name="paymentpage" options={{ headerShown: false }} />
 			</Stack>
 		</MenuProvider>
 	);

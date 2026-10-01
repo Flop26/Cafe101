@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
 import {
+	Image,
 	KeyboardAvoidingView,
 	Platform,
 	Pressable,
@@ -53,17 +54,12 @@ export default function LoginScreen() {
 					keyboardShouldPersistTaps="handled"
 					showsVerticalScrollIndicator={false}
 				>
-					<View style={styles.brandRow}>
-						<View style={styles.brandMark}>
-							<Text style={styles.brandMarkText}>C</Text>
-						</View>
-						<Text style={styles.brandName}>CAFE101</Text>
-					</View>
-
-					<View style={styles.header}>
-						<Text style={styles.eyebrow}>EMPLOYEE PORTAL</Text>
-						<Text style={styles.title}>Welcome back.</Text>
-						<Text style={styles.subtitle}>Sign in to manage today&apos;s cafe operations.</Text>
+					<View style={styles.logoWrap}>
+						<Image
+							source={require('../assets/cafe101logo.png')}
+							style={styles.logo}
+							resizeMode="contain"
+						/>
 					</View>
 
 					<View style={styles.form}>
@@ -107,12 +103,6 @@ export default function LoginScreen() {
 								value={password}
 							/>
 						</View>
-
-						<View style={styles.demoAccount}>
-							<Text style={styles.demoLabel}>DEMO EMPLOYEE ACCOUNT</Text>
-							<Text style={styles.demoCredentials}>Username: employee   Password: cafe101</Text>
-						</View>
-
 						{error ? <Text style={styles.error}>{error}</Text> : null}
 
 						<Pressable
@@ -120,8 +110,7 @@ export default function LoginScreen() {
 							onPress={handleLogin}
 							style={({ pressed }) => [styles.loginButton, pressed && styles.loginButtonPressed]}
 						>
-							<Text style={styles.loginButtonText}>SIGN IN</Text>
-							<Text style={styles.loginButtonArrow}>-&gt;</Text>
+							<Text style={styles.loginButtonText}>SIGN IN -&gt;</Text>
 						</Pressable>
 					</View>
 
@@ -158,57 +147,14 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 28,
 		paddingVertical: 28,
 	},
-	brandRow: {
+	logoWrap: {
 		alignItems: 'center',
-		flexDirection: 'row',
-		gap: 10,
-	},
-	brandMark: {
-		alignItems: 'center',
-		backgroundColor: colors.terracotta,
-		borderRadius: 7,
-		height: 34,
 		justifyContent: 'center',
-		transform: [{ rotate: '-8deg' }],
-		width: 34,
+		marginTop: 24,
 	},
-	brandMarkText: {
-		color: '#FFF9F1',
-		fontSize: 22,
-		fontWeight: '800',
-	},
-	brandName: {
-		color: colors.ink,
-		fontSize: 16,
-		fontWeight: '800',
-		letterSpacing: 2.5,
-	},
-	header: {
-		marginTop: 72,
-	},
-	eyebrow: {
-		color: colors.terracotta,
-		fontSize: 12,
-		fontWeight: '800',
-		letterSpacing: 2.2,
-		marginBottom: 14,
-	},
-	title: {
-		color: colors.ink,
-		fontSize: 42,
-		fontWeight: '800',
-		letterSpacing: -1,
-		lineHeight: 48,
-	},
-	subtitle: {
-		color: '#6F6B64',
-		fontSize: 16,
-		lineHeight: 24,
-		marginTop: 12,
-		maxWidth: 290,
-	},
-	form: {
-		marginTop: 48,
+	logo: {
+		height: 500,
+		width: 500,
 	},
 	fieldGroup: {
 		marginBottom: 24,
@@ -226,7 +172,7 @@ const styles = StyleSheet.create({
 		marginBottom: 9,
 	},
 	visibilityAction: {
-		color: colors.terracotta,
+		color: '#B38D70',
 		fontSize: 11,
 		fontWeight: '800',
 		letterSpacing: 1.2,
@@ -265,7 +211,7 @@ const styles = StyleSheet.create({
 	},
 	loginButton: {
 		alignItems: 'center',
-		backgroundColor: colors.terracotta,
+		backgroundColor: '#6D5236',
 		borderRadius: 6,
 		flexDirection: 'row',
 		justifyContent: 'space-between',
@@ -274,18 +220,14 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 	},
 	loginButtonPressed: {
-		backgroundColor: colors.terracottaDark,
+		backgroundColor: '#5e563c'
+,
 	},
 	loginButtonText: {
-		color: '#FFF9F1',
+		color: 'black',	
 		fontSize: 13,
 		fontWeight: '800',
 		letterSpacing: 1.8,
-	},
-	loginButtonArrow: {
-		color: '#FFF9F1',
-		fontSize: 22,
-		fontWeight: '300',
 	},
 	footer: {
 		alignItems: 'center',

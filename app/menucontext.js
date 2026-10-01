@@ -1,11 +1,25 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { databaseEnabled, loadCafeState, removeMenuItem, saveInventoryItem, saveMenuItem, saveOrder } from './api';
+import {
+	createCategoryApi,
+	databaseEnabled,
+	loadCafeState,
+	loadCategories,
+	removeCategoryApi,
+	removeInventoryItem,
+	removeMenuItem,
+	saveInventoryItem,
+	saveMenuItem,
+	saveOrder,
+	saveSpillageLog,
+	updateCategoryApi,
+} from './api';
+import { getUnitPrice } from '../utils/pricing';
 
 const initialMenuItems = [
 	{
 		id: 'americano',
 		name: 'Cafe Americano',
-		category: 'Coffee',
+		category: 'Coffee Series',
 		description: 'Bold espresso, hot water',
 		price: 3.5,
 		accent: '#B75E43',
@@ -19,8 +33,8 @@ const initialMenuItems = [
 	},
 	{
 		id: 'latte',
-		name: 'Caffe Latte',
-		category: 'Coffee',
+		name: 'Spanish Latte',
+		category: 'Coffee Series',
 		description: 'Espresso, steamed milk',
 		price: 4.5,
 		accent: '#C8945E',
@@ -33,66 +47,66 @@ const initialMenuItems = [
 		measurementUnit: 'ml',
 	},
 	{
-		id: 'mocha',
-		name: 'Mocha',
-		category: 'Coffee',
-		description: 'Chocolate, espresso, milk',
+		id: 'blueberry',
+		name: 'Blueberry Milky',
+		category: 'Milky Series',
+		description: 'blueberry milk',
 		price: 5,
 		accent: '#7C5744',
 		options: 'coffee',
 		ingredients: [
-			{ name: 'Espresso', amount: 18, unit: 'g' },
-			{ name: 'Chocolate sauce', amount: 30, unit: 'ml' },
+			{ name: 'Blueberry syrup', amount: 30, unit: 'ml' },
 			{ name: 'Milk', amount: 220, unit: 'ml' },
 		],
 		measurementAmount: 300,
 		measurementUnit: 'ml',
 	},
 	{
-		id: 'croissant',
-		name: 'Butter Croissant',
+		id: 'fries',
+		name: 'French Fries',
 		category: 'Snacks',
-		description: 'Freshly baked every morning',
+		description: 'Crispy golden fries',
 		price: 3.25,
 		accent: '#D29A4A',
 		options: 'none',
 		ingredients: [
-			{ name: 'Flour', amount: 60, unit: 'g' },
-			{ name: 'Butter', amount: 15, unit: 'g' },
-			{ name: 'Egg', amount: 1, unit: 'piece' },
+			{ name: 'Fries', amount: 60, unit: 'g' },
 		],
 		measurementAmount: 1,
 		measurementUnit: 'piece',
 	},
 	{
-		id: 'toast',
-		name: 'Avocado Toast',
+		id: 'chickenmeal',
+		name: 'Chicken Meal',
 		category: 'Meals',
-		description: 'Sourdough, avocado, herbs',
+		description: 'Chicken rice',
 		price: 7.5,
 		accent: '#76835A',
 		options: 'none',
 		ingredients: [
-			{ name: 'Sourdough', amount: 1, unit: 'piece' },
-			{ name: 'Avocado', amount: 80, unit: 'g' },
-			{ name: 'Herbs', amount: 2, unit: 'g' },
+			{ name: 'Chicken', amount: 100, unit: 'g' },
+			{ name: 'Rice', amount: 200, unit: 'g' },
+			{ name: 'Salt', amount: 10, unit: 'mg' },
+			{ name: 'Pepper', amount: 10, unit: 'mg' },
+			{ name: 'Flour', amount: 50, unit: 'g' },
+			{ name: 'Butter', amount: 10, unit: 'g' },
+			{ name: 'Egg', amount: 1, unit: 'piece' },
 		],
 		measurementAmount: 1,
 		measurementUnit: 'serving',
 	},
 	{
-		id: 'lemonade',
-		name: 'House Lemonade',
-		category: 'Sodas',
-		description: 'Fresh lemon, mint, ice',
+		id: 'strawberry-soda',
+		name: 'Strawberry Soda',
+		category: 'Non-Coffee Series',
+		description: 'Fresh strawberry, mint, ice',
 		price: 3.75,
 		accent: '#D5B744',
 		options: 'coldDrink',
 		ingredients: [
-			{ name: 'Lemon juice', amount: 40, unit: 'ml' },
-			{ name: 'Mint', amount: 2, unit: 'g' },
+			{ name: 'Strawberry syrup', amount: 40, unit: 'ml' },
+			{ name: 'Soda', amount: 30, unit: 'g' },
 			{ name: 'Water', amount: 280, unit: 'ml' },
-			{ name: 'Syrup', amount: 30, unit: 'ml' },
 		],
 		measurementAmount: 350,
 		measurementUnit: 'ml',
@@ -108,60 +122,207 @@ const initialInventoryItems = [
 	createInventoryItem('Flour', 10000, 'g', 2000, 2500),
 	createInventoryItem('Butter', 5000, 'g', 1000, 1000),
 	createInventoryItem('Egg', 36, 'piece', 8, 12),
-	createInventoryItem('Sourdough', 24, 'piece', 6, 6),
-	createInventoryItem('Avocado', 5000, 'g', 1000, 1000),
-	createInventoryItem('Herbs', 250, 'g', 50, 100),
-	createInventoryItem('Lemon juice', 6000, 'ml', 1000, 1500),
-	createInventoryItem('Mint', 300, 'g', 60, 100),
+	createInventoryItem('Strawberry syrup', 5000, 'ml', 800, 1000),
+	createInventoryItem('Soda', 3000, 'g', 500, 1000),
 	createInventoryItem('Water', 60000, 'ml', 5000, 10000),
-	createInventoryItem('Syrup', 5000, 'ml', 800, 1000),
+	createInventoryItem('Blueberry syrup', 5000, 'ml', 800, 1000),
+	createInventoryItem('Fries', 2000, 'g', 500, 1000),
+	createInventoryItem('Chicken', 5000, 'g', 1000, 2000),
+	createInventoryItem('Rice', 10000, 'g', 2000, 3000),
+	createInventoryItem('Salt', 1000, 'mg', 200, 500),
+	createInventoryItem('Pepper', 1000, 'mg', 200, 500),
 ];
+
+// Ids are URL-safe slugs (no spaces/capitals) so DELETE/PUT /api/categories/:id always works.
+// The four drink series offer sizes by default.
+const sizedCategoryNames = ['Coffee Series', 'Matcha Series', 'Milky Series', 'Non-Coffee Series'];
+const initialCategories = ['Coffee Series', 'Matcha Series', 'Milky Series', 'Non-Coffee Series', 'Snacks', 'Meals'].map((name) => ({
+	id: `category-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+	name,
+	description: '',
+	supportsSize: sizedCategoryNames.includes(name),
+}));
 
 const MenuContext = createContext(null);
 
 export function MenuProvider({ children }) {
 	const [menuItems, setMenuItems] = useState(initialMenuItems);
 	const [inventoryItems, setInventoryItems] = useState(initialInventoryItems);
+	const [categories, setCategories] = useState(initialCategories);
 	const [pendingOrder, setPendingOrder] = useState(null);
 	const [lastCompletedOrder, setLastCompletedOrder] = useState(null);
 	const [orderSequence, setOrderSequence] = useState(1);
 
 	useEffect(() => {
 		if (!databaseEnabled) return;
+
 		loadCafeState()
 			.then((state) => {
 				if (!state) return;
-				setMenuItems(state.menuItems);
+				setMenuItems(state.menuItems.map(normalizeId));
 				setInventoryItems(state.inventoryItems);
+				if (isCategoryList(state.categories)) {
+					setCategories((current) => mergeCategories(state.categories.map(normalizeId), current));
+				}
 			})
 			.catch((error) => console.error('Could not load cafe data:', error));
+
+		// Categories may also come from their own endpoint; keep the built-in list if it returns nothing usable.
+		loadCategories()
+			.then((list) => {
+				if (isCategoryList(list)) setCategories((current) => mergeCategories(list.map(normalizeId), current));
+			})
+			.catch((error) => console.error('Could not load categories:', error));
 	}, []);
 
-	function createMenuItem(item) {
-		setMenuItems((currentItems) => [...currentItems, item]);
+	// ---- Menu items ----
+	// Server first. The server may assign its own id, so we keep the id it returns;
+	// otherwise later deletes/updates would target an id the server has never seen.
+	async function createMenuItem(item) {
+		let saved = item;
+		if (databaseEnabled) {
+			const response = await saveMenuItem(item, true);
+			saved = withServerId(item, response);
+		}
+		setMenuItems((currentItems) => [...currentItems, saved]);
 		setInventoryItems((currentItems) => {
-			const nextItems = addMissingInventoryItems(currentItems, item.ingredients);
+			const nextItems = addMissingInventoryItems(currentItems, saved.ingredients);
 			if (databaseEnabled) nextItems.filter((nextItem) => !currentItems.some((currentItem) => currentItem.id === nextItem.id)).forEach((nextItem) => saveInventoryItem(nextItem).catch(console.error));
 			return nextItems;
 		});
-		if (databaseEnabled) saveMenuItem(item, true).catch(console.error);
 	}
 
-	function updateMenuItem(itemId, updates) {
+	async function updateMenuItem(itemId, updates) {
+		let nextId = itemId;
+		if (databaseEnabled) {
+			try {
+				await saveMenuItem({ id: itemId, ...updates });
+			} catch (error) {
+				// Only starter items can be missing on the server: create them there instead
+				if (!(isNotFound(error) && starterMenuIds.has(itemId))) throw error;
+				const existing = menuItems.find((item) => item.id === itemId);
+				const response = await saveMenuItem({ ...existing, ...updates, id: itemId }, true);
+				nextId = withServerId({ id: itemId }, response).id;
+			}
+		}
 		setMenuItems((currentItems) => currentItems.map((item) => (
-			item.id === itemId ? { ...item, ...updates } : item
+			item.id === itemId ? { ...item, ...updates, id: nextId } : item
 		)));
 		setInventoryItems((currentItems) => {
 			const nextItems = addMissingInventoryItems(currentItems, updates.ingredients);
 			if (databaseEnabled) nextItems.filter((nextItem) => !currentItems.some((currentItem) => currentItem.id === nextItem.id)).forEach((nextItem) => saveInventoryItem(nextItem).catch(console.error));
 			return nextItems;
 		});
-		if (databaseEnabled) saveMenuItem({ id: itemId, ...updates }).catch(console.error);
 	}
 
-	function deleteMenuItem(itemId) {
+	// Server first: the item is only removed locally once the server confirms.
+	// A 404 means the server never had it (e.g. a starter item), so it counts as deleted.
+	async function deleteMenuItem(itemId) {
+		if (databaseEnabled) {
+			try {
+				await removeMenuItem(itemId);
+			} catch (error) {
+				if (!(isNotFound(error) && starterMenuIds.has(itemId))) throw error;
+			}
+		}
 		setMenuItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
-		if (databaseEnabled) removeMenuItem(itemId).catch(console.error);
+	}
+
+	// ---- Categories ----
+	// Category changes are server first: local state only changes once the server accepts it,
+	// and errors are thrown so the screen can tell the user nothing was saved.
+	async function addCategory({ name, description = '', supportsSize = false }) {
+		const category = {
+			id: `category-${Date.now()}`,
+			name,
+			description,
+			supportsSize: Boolean(supportsSize),
+		};
+		let saved = category;
+		if (databaseEnabled) {
+			const response = await createCategoryApi(category);
+			saved = withServerId(category, response);
+		}
+		setCategories((currentCategories) => [...currentCategories, saved]);
+	}
+
+	async function updateCategory(categoryId, patch) {
+		const existing = categories.find((category) => category.id === categoryId);
+		if (!existing) return;
+
+		if (databaseEnabled) {
+			try {
+				await updateCategoryApi(categoryId, patch);
+			} catch (error) {
+				if (!(isNotFound(error) && starterCategoryIds.has(categoryId))) throw error;
+				// Server doesn't know this starter category yet: create it instead
+				await createCategoryApi({ ...existing, ...patch });
+			}
+		}
+
+		setCategories((currentCategories) => currentCategories.map((category) => (
+			category.id === categoryId ? { ...category, ...patch } : category
+		)));
+
+		// Keep menu items pointing at the renamed category
+		if (patch.name && patch.name !== existing.name) {
+			setMenuItems((currentItems) => currentItems.map((item) => (
+				item.category === existing.name ? { ...item, category: patch.name } : item
+			)));
+		}
+	}
+
+	async function deleteCategory(categoryId) {
+		const existing = categories.find((category) => category.id === categoryId);
+		if (!existing) return { deleted: false, message: 'Category not found.' };
+
+		const inUse = menuItems.filter((item) => item.category === existing.name);
+		if (inUse.length) {
+			return {
+				deleted: false,
+				message: `"${existing.name}" still has ${inUse.length} menu item(s). Move or delete them first.`,
+			};
+		}
+
+		if (databaseEnabled) {
+			try {
+				await removeCategoryApi(categoryId);
+			} catch (error) {
+				if (error?.status === 409) {
+					return { deleted: false, message: 'The server says this category is still in use.' };
+				}
+				if (!(isNotFound(error) && starterCategoryIds.has(categoryId))) throw error;
+			}
+		}
+		setCategories((current) => current.filter((category) => category.id !== categoryId));
+		return { deleted: true };
+	}
+
+	// ---- Inventory ----
+	function addInventoryItem({ name, unit, quantity, reorderPoint, restockAmount }) {
+		const item = createInventoryItem(String(name).trim(), quantity, String(unit).trim(), reorderPoint, restockAmount);
+
+		if (inventoryItems.some((existing) => existing.id === item.id)) {
+			return { added: false, message: 'An item with this name and unit already exists.' };
+		}
+
+		setInventoryItems((currentItems) => [...currentItems, item]);
+		if (databaseEnabled) saveInventoryItem(item).catch(console.error);
+		return { added: true };
+	}
+
+	function updateInventoryItem(itemId, patch) {
+		const existing = inventoryItems.find((item) => item.id === itemId);
+		if (!existing) return;
+
+		const nextItem = { ...existing, ...patch };
+		setInventoryItems((currentItems) => currentItems.map((item) => (item.id === itemId ? nextItem : item)));
+		if (databaseEnabled) saveInventoryItem(nextItem).catch(console.error);
+	}
+
+	function deleteInventoryItem(itemId) {
+		setInventoryItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
+		if (databaseEnabled) removeInventoryItem(itemId).catch(console.error);
 	}
 
 	function updateInventoryStock(itemId, change) {
@@ -170,9 +331,9 @@ export function MenuProvider({ children }) {
 
 		setInventoryItems((currentItems) => {
 			const nextItems = currentItems.map((item) => (
-			item.id === itemId
-				? { ...item, quantity: roundStock(Math.max(0, item.quantity + stockChange)) }
-				: item
+				item.id === itemId
+					? { ...item, quantity: roundStock(Math.max(0, item.quantity + stockChange)) }
+					: item
 			));
 			const changedItem = nextItems.find((item) => item.id === itemId);
 			if (databaseEnabled && changedItem) saveInventoryItem(changedItem).catch(console.error);
@@ -180,6 +341,29 @@ export function MenuProvider({ children }) {
 		});
 	}
 
+	async function logSpillage({ inventoryId, quantityWasted, reason = '' }) {
+		const amount = Number.parseFloat(quantityWasted);
+		const item = inventoryItems.find((inventoryItem) => inventoryItem.id === inventoryId);
+		if (!item || !Number.isFinite(amount) || amount <= 0) {
+			return { logged: false, message: 'Choose an item and enter a quantity greater than 0.' };
+		}
+		if (amount > item.quantity) {
+			return { logged: false, message: `Only ${item.quantity} ${item.unit} is currently in stock.` };
+		}
+
+		if (databaseEnabled) {
+			await saveSpillageLog({ inventoryId, quantityWasted: amount, reason: reason.trim() });
+		}
+
+		setInventoryItems((currentItems) => currentItems.map((inventoryItem) => (
+			inventoryItem.id === inventoryId
+				? { ...inventoryItem, quantity: roundStock(Math.max(0, inventoryItem.quantity - amount)) }
+				: inventoryItem
+		)));
+		return { logged: true };
+	}
+
+	// ---- Orders ----
 	function completeOrder(cart) {
 		const requirements = buildOrderRequirements(menuItems, cart);
 		const missing = findMissingIngredients(inventoryItems, requirements);
@@ -225,7 +409,8 @@ export function MenuProvider({ children }) {
 		setPendingOrder(null);
 	}
 
-	function completePendingOrder(paymentMethod) {
+	// `extra` carries payment details from the payment screen (transactionId, amountTendered, change)
+	function completePendingOrder(paymentMethod, extra = {}) {
 		if (!pendingOrder) return { completed: false, message: 'No order is ready for payment.' };
 
 		const result = completeOrder(pendingOrder.cart);
@@ -233,6 +418,7 @@ export function MenuProvider({ children }) {
 
 		const completedOrder = {
 			...pendingOrder,
+			...extra,
 			paymentMethod,
 			paidAt: new Date().toISOString(),
 			ingredientsDeducted: result.requirements,
@@ -250,12 +436,21 @@ export function MenuProvider({ children }) {
 		<MenuContext.Provider value={{
 			menuItems,
 			inventoryItems,
+			categories,
 			pendingOrder,
 			lastCompletedOrder,
 			createMenuItem,
 			updateMenuItem,
 			deleteMenuItem,
+			addCategory,
+			createCategory: addCategory,
+			updateCategory,
+			deleteCategory,
+			addInventoryItem,
+			updateInventoryItem,
+			deleteInventoryItem,
 			updateInventoryStock,
+			logSpillage,
 			completeOrder,
 			createPendingOrder,
 			clearPendingOrder,
@@ -270,6 +465,43 @@ export function useMenu() {
 	const context = useContext(MenuContext);
 	if (!context) throw new Error('useMenu must be used inside MenuProvider');
 	return context;
+}
+
+function isNotFound(error) {
+	return error?.status === 404;
+}
+
+// Ids of the built-in demo data. Only these may legitimately be missing on the server.
+const starterMenuIds = new Set(initialMenuItems.map((item) => item.id));
+const starterCategoryIds = new Set(initialCategories.map((category) => category.id));
+
+// Use the id the server gave the saved record (id or Mongo-style _id), if any
+function withServerId(local, response) {
+	const serverId = response?.id ?? response?._id;
+	return serverId !== undefined && serverId !== null ? { ...local, id: String(serverId) } : local;
+}
+
+function normalizeId(record) {
+	if (!record || record.id !== undefined || record._id === undefined) return record;
+	return { ...record, id: String(record._id) };
+}
+
+function isCategoryList(value) {
+	return Array.isArray(value)
+		&& value.length > 0
+		&& value.every((category) => category && typeof category === 'object' && category.name);
+}
+
+// Server categories win, but if the server doesn't store supportsSize
+// we keep the value we already have locally instead of resetting it to false.
+function mergeCategories(incoming, current) {
+	return incoming.map((category) => {
+		const local = current.find((c) => c.id === category.id || c.name === category.name);
+		return {
+			...category,
+			supportsSize: category.supportsSize ?? local?.supportsSize ?? false,
+		};
+	});
 }
 
 function createInventoryItem(name, quantity, unit, reorderPoint, restockAmount) {
@@ -304,14 +536,18 @@ function buildPendingOrder(menuItems, cart, notes, customizations, orderSequence
 		.map((item) => {
 			const quantity = Number.parseFloat(cart[item.id] || 0);
 			const customization = customizations[item.id] || {};
+			// Price follows the chosen size (missing size = base price)
+			const unitPrice = getUnitPrice(item, customization);
 
 			return {
 				id: item.id,
 				name: item.name,
 				category: item.category,
-				price: item.price,
+				price: unitPrice,
+				basePrice: item.price,
+				size: customization.size || '',
 				quantity,
-				lineTotal: roundStock(item.price * quantity),
+				lineTotal: roundStock(unitPrice * quantity),
 				note: notes[item.id] || '',
 				customization,
 				ingredients: item.ingredients || [],
