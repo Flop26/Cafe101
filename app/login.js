@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
 import {
+	Image,
 	KeyboardAvoidingView,
 	Platform,
 	Pressable,
@@ -9,22 +10,24 @@ import {
 	StyleSheet,
 	Text,
 	TextInput,
+	useWindowDimensions,
 	View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-
-const demoEmployee = {
-	username: 'employee',
-	password: 'cafe101',
-};
+import { useMenu } from './menucontext';
+import { scaleTabletTypography } from '../utils/typography';
 
 export default function LoginScreen() {
+	const { signIn } = useMenu();
+	const { width } = useWindowDimensions();
+	const logoSize = Math.max(0, Math.min(width - 56, width < 640 ? 260 : 500));
 	const [username, setUsername] = useState('');
 	const [password, setPassword] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
 	const [error, setError] = useState('');
+	const [signingIn, setSigningIn] = useState(false);
 
-	function handleLogin() {
+	async function handleLogin() {
 		const trimmedUsername = username.trim();
 
 		if (!trimmedUsername || !password) {
@@ -32,13 +35,16 @@ export default function LoginScreen() {
 			return;
 		}
 
-		if (trimmedUsername !== demoEmployee.username || password !== demoEmployee.password) {
-			setError('Incorrect username or password. Try the demo account below.');
-			return;
+		setSigningIn(true);
+		try {
+			await signIn(trimmedUsername, password);
+			setError('');
+			router.replace('/menudashboard');
+		} catch (loginError) {
+			setError(loginError.message || 'Could not sign in. Check your connection and try again.');
+		} finally {
+			setSigningIn(false);
 		}
-
-		setError('');
-		router.replace('/menudashboard');
 	}
 
 	return (
@@ -53,20 +59,15 @@ export default function LoginScreen() {
 					keyboardShouldPersistTaps="handled"
 					showsVerticalScrollIndicator={false}
 				>
-					<View style={styles.brandRow}>
-						<View style={styles.brandMark}>
-							<Text style={styles.brandMarkText}>C</Text>
-						</View>
-						<Text style={styles.brandName}>CAFE101</Text>
+					<View style={styles.logoWrap}>
+						<Image
+							source={require('../assets/cafe101logo.png')}
+							style={[styles.logo, { height: logoSize, width: logoSize }]}
+							resizeMode="contain"
+						/>
 					</View>
 
-					<View style={styles.header}>
-						<Text style={styles.eyebrow}>EMPLOYEE PORTAL</Text>
-						<Text style={styles.title}>Welcome back.</Text>
-						<Text style={styles.subtitle}>Sign in to manage today&apos;s cafe operations.</Text>
-					</View>
-
-					<View style={styles.form}>
+					<View style={styles.formContainer}>
 						<View style={styles.fieldGroup}>
 							<Text style={styles.label}>USERNAME</Text>
 							<TextInput
@@ -107,27 +108,28 @@ export default function LoginScreen() {
 								value={password}
 							/>
 						</View>
-
-						<View style={styles.demoAccount}>
-							<Text style={styles.demoLabel}>DEMO EMPLOYEE ACCOUNT</Text>
-							<Text style={styles.demoCredentials}>Username: employee   Password: cafe101</Text>
-						</View>
-
 						{error ? <Text style={styles.error}>{error}</Text> : null}
 
 						<Pressable
 							accessibilityRole="button"
+							disabled={signingIn}
 							onPress={handleLogin}
-							style={({ pressed }) => [styles.loginButton, pressed && styles.loginButtonPressed]}
+							style={({ pressed }) => [styles.loginButton, (pressed || signingIn) && styles.loginButtonPressed]}
 						>
-							<Text style={styles.loginButtonText}>SIGN IN</Text>
-							<Text style={styles.loginButtonArrow}>-&gt;</Text>
+							<Text style={styles.loginButtonText}>{signingIn ? 'SIGNING IN...' : 'SIGN IN'}</Text>
 						</Pressable>
 					</View>
 
+					<Pressable
+						accessibilityRole="button"
+						onPress={() => router.push('/currentorders')}
+						style={({ pressed }) => [styles.currentOrdersButton, pressed && styles.currentOrdersButtonPressed]}
+					>
+						<Text style={styles.currentOrdersButtonText}>VIEW CURRENT ORDERS</Text>
+					</Pressable>
+
 					<View style={styles.footer}>
 						<View style={styles.footerLine} />
-						<Text style={styles.footerText}>AUTHORIZED STAFF ONLY</Text>
 					</View>
 				</ScrollView>
 			</KeyboardAvoidingView>
@@ -144,7 +146,7 @@ const colors = {
 	border: '#D8D1C7',
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(scaleTabletTypography({
 	safeArea: {
 		backgroundColor: colors.background,
 		flex: 1,
@@ -158,57 +160,44 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 28,
 		paddingVertical: 28,
 	},
-	brandRow: {
+	logoWrap: {
 		alignItems: 'center',
-		flexDirection: 'row',
-		gap: 10,
-	},
-	brandMark: {
-		alignItems: 'center',
-		backgroundColor: colors.terracotta,
-		borderRadius: 7,
-		height: 34,
 		justifyContent: 'center',
-		transform: [{ rotate: '-8deg' }],
-		width: 34,
+		marginTop: 24,
 	},
-	brandMarkText: {
-		color: '#FFF9F1',
-		fontSize: 22,
-		fontWeight: '800',
+	logo: {
+		maxWidth: '100%',
 	},
-	brandName: {
-		color: colors.ink,
-		fontSize: 16,
-		fontWeight: '800',
-		letterSpacing: 2.5,
+	formContainer: {
+		alignSelf: 'center',
+		backgroundColor: '#FFFCF8',
+		borderColor: colors.border,
+		borderRadius: 12,
+		borderWidth: 1,
+		maxWidth: 480,
+		padding: 24,
+		width: '100%',
 	},
-	header: {
-		marginTop: 72,
+	currentOrdersButton: {
+		alignItems: 'center',
+		alignSelf: 'center',
+		borderColor: colors.terracotta,
+		borderRadius: 8,
+		borderWidth: 1,
+		justifyContent: 'center',
+		marginTop: 18,
+		maxWidth: 480,
+		minHeight: 50,
+		width: '100%',
 	},
-	eyebrow: {
-		color: colors.terracotta,
+	currentOrdersButtonPressed: {
+		backgroundColor: '#EEE7DC',
+	},
+	currentOrdersButtonText: {
+		color: colors.terracottaDark,
 		fontSize: 12,
 		fontWeight: '800',
-		letterSpacing: 2.2,
-		marginBottom: 14,
-	},
-	title: {
-		color: colors.ink,
-		fontSize: 42,
-		fontWeight: '800',
-		letterSpacing: -1,
-		lineHeight: 48,
-	},
-	subtitle: {
-		color: '#6F6B64',
-		fontSize: 16,
-		lineHeight: 24,
-		marginTop: 12,
-		maxWidth: 290,
-	},
-	form: {
-		marginTop: 48,
+		letterSpacing: 1.2,
 	},
 	fieldGroup: {
 		marginBottom: 24,
@@ -226,7 +215,7 @@ const styles = StyleSheet.create({
 		marginBottom: 9,
 	},
 	visibilityAction: {
-		color: colors.terracotta,
+		color: '#B38D70',
 		fontSize: 11,
 		fontWeight: '800',
 		letterSpacing: 1.2,
@@ -265,7 +254,7 @@ const styles = StyleSheet.create({
 	},
 	loginButton: {
 		alignItems: 'center',
-		backgroundColor: colors.terracotta,
+		backgroundColor: '#6D5236',
 		borderRadius: 6,
 		flexDirection: 'row',
 		justifyContent: 'space-between',
@@ -274,18 +263,14 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 	},
 	loginButtonPressed: {
-		backgroundColor: colors.terracottaDark,
+		backgroundColor: '#5e563c'
+,
 	},
 	loginButtonText: {
-		color: '#FFF9F1',
+		color: 'black',	
 		fontSize: 13,
 		fontWeight: '800',
 		letterSpacing: 1.8,
-	},
-	loginButtonArrow: {
-		color: '#FFF9F1',
-		fontSize: 22,
-		fontWeight: '300',
 	},
 	footer: {
 		alignItems: 'center',
@@ -304,4 +289,4 @@ const styles = StyleSheet.create({
 		fontWeight: '800',
 		letterSpacing: 1.2,
 	},
-});
+}));

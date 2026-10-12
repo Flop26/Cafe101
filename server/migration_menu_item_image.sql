@@ -1,0 +1,4 @@
+USE cafe101;
+
+ALTER TABLE Menu_Item
+  ADD COLUMN Image_URI MEDIUMTEXT NULL AFTER Availability;

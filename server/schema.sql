@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS Customer_Users (
 CREATE TABLE IF NOT EXISTS Category (
   Category_ID INT AUTO_INCREMENT PRIMARY KEY,
   Category_Name VARCHAR(80) NOT NULL UNIQUE,
-  Description TEXT
+  Description TEXT,
+  Supports_Size TINYINT(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS Menu_Item (
@@ -37,7 +38,10 @@ CREATE TABLE IF NOT EXISTS Menu_Item (
   Item_Name VARCHAR(150) NOT NULL,
   Description TEXT,
   Price DECIMAL(10,2) NOT NULL,
+  Medium_Size_Increase DECIMAL(8,2) NOT NULL DEFAULT 0,
+  Large_Size_Increase DECIMAL(8,2) NOT NULL DEFAULT 0,
   Availability TINYINT(1) NOT NULL DEFAULT 1,
+  Image_URI MEDIUMTEXT NULL,
   CONSTRAINT fk_menu_item_category
     FOREIGN KEY (Category_ID) REFERENCES Category(Category_ID)
     ON UPDATE CASCADE
@@ -79,6 +83,8 @@ CREATE TABLE IF NOT EXISTS Orders (
   Order_Date DATETIME NOT NULL,
   Total_Amount DECIMAL(10,2) NOT NULL,
   Status VARCHAR(30) NOT NULL,
+  Kitchen_Status VARCHAR(20) NOT NULL DEFAULT 'Working',
+  Order_Details JSON NULL,
   CONSTRAINT fk_orders_customer_users
     FOREIGN KEY (Customer_ID) REFERENCES Customer_Users(Customer_ID)
     ON UPDATE CASCADE

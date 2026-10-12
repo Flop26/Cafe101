@@ -19,7 +19,7 @@
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/cafe101logo.png"
     },
     "plugins": [
       "expo-router"
