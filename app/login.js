@@ -63,11 +63,13 @@ export default function LoginScreen() {
 						<Image
 							source={require('../assets/cafe101logo.png')}
 							style={[styles.logo, { height: logoSize, width: logoSize }]}
+
 							resizeMode="contain"
 						/>
 					</View>
 
 					<View style={styles.formContainer}>
+
 						<View style={styles.fieldGroup}>
 							<Text style={styles.label}>USERNAME</Text>
 							<TextInput
@@ -117,6 +119,7 @@ export default function LoginScreen() {
 							style={({ pressed }) => [styles.loginButton, (pressed || signingIn) && styles.loginButtonPressed]}
 						>
 							<Text style={styles.loginButtonText}>{signingIn ? 'SIGNING IN...' : 'SIGN IN'}</Text>
+
 						</Pressable>
 					</View>
 
@@ -198,6 +201,7 @@ const styles = StyleSheet.create(scaleTabletTypography({
 		fontSize: 12,
 		fontWeight: '800',
 		letterSpacing: 1.2,
+
 	},
 	fieldGroup: {
 		marginBottom: 24,

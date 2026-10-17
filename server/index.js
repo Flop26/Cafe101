@@ -297,6 +297,7 @@ app.patch('/api/inventory/:id', requireRole('admin'), async (request, response, 
 });
 
 app.delete('/api/inventory/:id', requireRole('admin'), async (request, response, next) => {
+
   try {
     const id = String(request.params.id || '').trim();
     const [recipes] = await pool.query('SELECT COUNT(*) AS count FROM Recipe_Item WHERE Inventory_ID = ?', [id]);
@@ -314,6 +315,7 @@ app.delete('/api/inventory/:id', requireRole('admin'), async (request, response,
 });
 
 app.post('/api/orders', requireRole('admin', 'employee'), async (request, response, next) => {
+
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -440,6 +442,7 @@ app.get('/api/categories', async (_request, response, next) => {
 });
 
 app.post('/api/categories', requireRole('admin'), async (request, response, next) => {
+
   try {
     const name = String(request.body.name || '').trim();
     const description = String(request.body.description || '').trim();
@@ -460,6 +463,7 @@ app.post('/api/categories', requireRole('admin'), async (request, response, next
 });
 
 app.put('/api/categories/:id', requireRole('admin'), async (request, response, next) => {
+
   try {
     const [rows] = await pool.query('SELECT * FROM Category WHERE Category_ID = ?', [Number(request.params.id)]);
     if (!rows.length) return response.status(404).json({ message: 'Category not found.' });
@@ -486,6 +490,7 @@ app.put('/api/categories/:id', requireRole('admin'), async (request, response, n
 });
 
 app.delete('/api/categories/:id', requireRole('admin'), async (request, response, next) => {
+
   try {
     const categoryId = Number(request.params.id);
     const [items] = await pool.query('SELECT COUNT(*) AS count FROM Menu_Item WHERE Category_ID = ?', [categoryId]);
@@ -644,6 +649,7 @@ async function saveMenuItem(connection, rawItem) {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE Category_ID = VALUES(Category_ID), Item_Name = VALUES(Item_Name), Description = VALUES(Description), Price = VALUES(Price), Medium_Size_Increase = VALUES(Medium_Size_Increase), Large_Size_Increase = VALUES(Large_Size_Increase), Availability = VALUES(Availability), Image_URI = VALUES(Image_URI)`,
     [item.id, categoryId, item.name, item.description, item.price, item.sizeIncreases.Medium, item.sizeIncreases.Large, item.availability, item.imageUri || null],
+
   );
 
   await connection.query('DELETE FROM Recipe_Item WHERE Menu_Item_ID = ?', [item.id]);

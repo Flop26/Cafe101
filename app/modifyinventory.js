@@ -7,6 +7,7 @@ import { scaleTabletTypography } from '../utils/typography';
 
 const emptyForm = { name: '', unit: '', quantity: '', lowStockWarningAt: '' };
 
+
 export default function ModifyInventory() {
 	const { inventoryItems, menuItems, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useMenu();
 	const [formVisible, setFormVisible] = useState(false);
@@ -22,6 +23,8 @@ export default function ModifyInventory() {
 		() => [...(inventoryItems || [])].sort((a, b) => a.name.localeCompare(b.name)),
 		[inventoryItems],
 	);
+
+	// Which menu items use each inventory item (matched by name + unit, same as menucontext)
 
 	const usageById = useMemo(() => {
 		const usage = {};
@@ -53,6 +56,7 @@ export default function ModifyInventory() {
 			unit: item.unit,
 			quantity: String(item.quantity),
 			lowStockWarningAt: String(item.reorderPoint),
+
 		});
 		setFormError('');
 		setFormVisible(true);
@@ -75,6 +79,7 @@ export default function ModifyInventory() {
 		const quantity = Number.parseFloat(form.quantity);
 		const lowStockWarningAt = Number.parseFloat(form.lowStockWarningAt);
 
+
 		if (!editingId) {
 			if (!name) return setFormError('Item name is required.');
 			if (!unit) return setFormError('Unit is required (for example g, ml, or piece).');
@@ -87,6 +92,7 @@ export default function ModifyInventory() {
 		} else {
 			// restockAmount is no longer used by this screen; it is kept on the record so the API and database keep working.
 			const result = addInventoryItem({ name, unit, quantity, reorderPoint: lowStockWarningAt, restockAmount: Math.max(lowStockWarningAt, 1) });
+
 			if (!result?.added) return setFormError(result?.message || 'Could not add this item.');
 		}
 
@@ -155,6 +161,7 @@ export default function ModifyInventory() {
 							<View style={styles.cardTop}>
 								<View style={styles.cardNameBlock}>
 									<Text style={styles.cardName}>{item.name}</Text>
+
 								</View>
 								<View style={styles.stockBlock}>
 									<Text style={[styles.stockValue, low && styles.stockValueLow]}>{item.quantity}</Text>
@@ -180,6 +187,7 @@ export default function ModifyInventory() {
 			/>
 			</KeyboardAvoidingView>
 
+
 			{/* Add / edit form */}
 			<Modal animationType="slide" transparent visible={formVisible} onRequestClose={closeForm}>
 				<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBackdrop}>
@@ -200,6 +208,9 @@ export default function ModifyInventory() {
 							) : (
 								<TextInput
 									onChangeText={(value) => updateField('name', value)}
+									placeholder="e.g. Oat milk"
+									placeholderTextColor={colors.muted}
+
 									style={styles.fieldInput}
 									value={form.name}
 								/>
@@ -214,6 +225,9 @@ export default function ModifyInventory() {
 								<TextInput
 									autoCapitalize="none"
 									onChangeText={(value) => updateField('unit', value)}
+									placeholder="g, ml, or piece"
+									placeholderTextColor={colors.muted}
+
 									style={styles.fieldInput}
 									value={form.unit}
 								/>
@@ -228,6 +242,9 @@ export default function ModifyInventory() {
 									<TextInput
 										keyboardType="decimal-pad"
 										onChangeText={(value) => updateField('quantity', value)}
+										placeholder="0"
+										placeholderTextColor={colors.muted}
+
 										style={styles.fieldInput}
 										value={form.quantity}
 									/>
@@ -244,6 +261,7 @@ export default function ModifyInventory() {
 								value={form.lowStockWarningAt}
 							/>
 							<Text style={styles.helperText}>Show a low-stock warning when stock on hand reaches this amount or less.</Text>
+
 
 							{formError ? <Text style={styles.formErrorText}>{formError}</Text> : null}
 
@@ -289,6 +307,42 @@ export default function ModifyInventory() {
 						</View>
 					</View>
 				</KeyboardAvoidingView>
+			</Modal>
+
+			{/* Set exact stock */}
+			<Modal animationType="fade" transparent visible={Boolean(stockItemId)} onRequestClose={closeStockForm}>
+				<View style={styles.confirmBackdrop}>
+					<View style={styles.confirmCard}>
+						<Text style={styles.confirmTitle}>Set stock for {stockTarget?.name}</Text>
+						<Text style={styles.confirmBody}>Type the exact amount you have on hand. This replaces the current count.</Text>
+
+						<Text style={styles.fieldLabel}>STOCK ON HAND ({stockTarget?.unit})</Text>
+						<TextInput
+							autoFocus
+							keyboardType="decimal-pad"
+							onChangeText={(value) => {
+								setStockText(value);
+								setStockError('');
+							}}
+							onSubmitEditing={saveStock}
+							placeholder="0"
+							placeholderTextColor={colors.muted}
+							selectTextOnFocus
+							style={styles.fieldInput}
+							value={stockText}
+						/>
+						{stockError ? <Text style={styles.formErrorText}>{stockError}</Text> : null}
+
+						<View style={styles.confirmActions}>
+							<Pressable onPress={closeStockForm} style={styles.confirmCancel}>
+								<Text style={styles.confirmCancelText}>Cancel</Text>
+							</Pressable>
+							<Pressable onPress={saveStock} style={styles.confirmPrimary}>
+								<Text style={styles.confirmPrimaryText}>Save</Text>
+							</Pressable>
+						</View>
+					</View>
+				</View>
 			</Modal>
 
 			{/* Delete confirmation */}
@@ -343,6 +397,7 @@ const colors = {
 };
 
 const styles = StyleSheet.create(scaleTabletTypography({
+
 	safeArea: { backgroundColor: colors.background, flex: 1 },
 	keyboardAvoiding: { flex: 1 },
 	header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 18 },
@@ -357,6 +412,7 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	inventoryGridRow: { gap: 12 },
 	emptyState: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingVertical: 30, textAlign: 'center' },
 	card: { backgroundColor: colors.panel, borderColor: colors.border, borderRadius: 9, borderWidth: 1, flex: 1, marginBottom: 12, minWidth: 0, padding: 14 },
+
 	cardTop: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
 	cardNameBlock: { flex: 1, gap: 4, paddingRight: 12 },
 	cardName: { color: colors.ink, fontSize: 15, fontWeight: '800' },
@@ -381,6 +437,7 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	closeButton: { alignItems: 'center', borderColor: colors.border, borderRadius: 18, borderWidth: 1, height: 36, justifyContent: 'center', width: 36 },
 	closeButtonText: { color: colors.ink, fontSize: 15, fontWeight: '800' },
 	fieldLabel: { color: colors.ink, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8, marginTop: 16 },
+
 	fieldInput: { backgroundColor: colors.background, borderColor: colors.border, borderRadius: 6, borderWidth: 1, color: colors.ink, fontSize: 15, paddingHorizontal: 14, paddingVertical: 12 },
 	fieldInputLocked: { backgroundColor: colors.locked },
 	lockedText: { color: colors.muted, fontSize: 15 },

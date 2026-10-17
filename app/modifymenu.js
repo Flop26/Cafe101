@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMenu } from './menucontext';
 import { getSizeList, getSizePrice, getOptionType } from '../utils/pricing';
 import { scaleTabletTypography } from '../utils/typography';
+
 
 const emptyForm = {
 	name: '',
@@ -135,6 +137,7 @@ export default function ModifyMenu() {
 			setError(pickError.message || 'Could not open the image picker.');
 		}
 	}
+
 
 	function updateSizeIncrease(size, value) {
 		setForm((f) => ({ ...f, sizeIncreases: { ...f.sizeIncreases, [size]: value } }));
@@ -301,11 +304,13 @@ export default function ModifyMenu() {
 				message: `This overwrites the saved details of "${itemData.name}" (price, sizes, ingredients, category). Orders already placed are not changed.`,
 				confirmText: 'UPDATE',
 				onConfirm: () => persistItem(itemData, editingId),
+
 			});
 			return;
 		}
 
 		persistItem(itemData);
+
 	}
 
 	return (
@@ -470,6 +475,7 @@ export default function ModifyMenu() {
 				</View>
 			</ScrollView>
 			</KeyboardAvoidingView>
+
 			<Modal animationType="fade" onRequestClose={() => setIngredientPickerIndex(null)} transparent visible={ingredientPickerIndex !== null}>
 				<View style={styles.modalBackdrop}>
 					<View style={[styles.categoryModal, styles.ingredientPickerModal]}>
@@ -496,6 +502,7 @@ export default function ModifyMenu() {
 			</Modal>
 			<Modal animationType="fade" onRequestClose={closeCategoryModal} transparent visible={categoryModalVisible}>
 				<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalBackdrop}>
+
 					<View style={styles.categoryModal}>
 						<Text style={styles.sectionLabel}>NEW CATEGORY</Text>
 						<Text style={styles.formTitle}>Add a category</Text>
@@ -534,6 +541,7 @@ export default function ModifyMenu() {
 						</View>
 					</View>
 				</KeyboardAvoidingView>
+
 			</Modal>
 			<Modal animationType="fade" onRequestClose={closeDeleteCategoryModal} transparent visible={deleteModalVisible}>
 				<View style={styles.modalBackdrop}>
@@ -617,6 +625,7 @@ function sameIngredient(left, right) {
 }
 
 const styles = StyleSheet.create(scaleTabletTypography({
+
 	safeArea: { backgroundColor: colors.background, flex: 1 },
 	keyboardAvoiding: { flex: 1 },
 	content: { padding: 24, paddingBottom: 48 },

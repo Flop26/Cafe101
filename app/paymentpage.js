@@ -7,6 +7,7 @@ import * as Sharing from 'expo-sharing';
 import { useMenu } from './menucontext';
 import { scaleTabletTypography } from '../utils/typography';
 
+
 const paymentOptions = [
     { id: 'cash', label: 'Cash', detail: 'Enter amount received' },
     { id: 'cashless', label: 'Cashless', detail: 'Exact amount, manual record' },
@@ -32,12 +33,14 @@ export default function Payment() {
     const [downloadingReceipt, setDownloadingReceipt] = useState(false);
     const [receiptDownloadMessage, setReceiptDownloadMessage] = useState('');
 
+
     const total = pendingOrder ? pendingOrder.subtotal : 0;
     const isCash = paymentMethod === 'cash';
     const tendered = isCash ? Number.parseFloat(amountText) || 0 : total;
     const difference = roundMoney(tendered - total);
     const canPay = Boolean(pendingOrder)
         && (isCash ? tendered > 0 && difference >= 0 : Boolean(onlineReference.trim()));
+
 
     function pressKey(key) {
         setMessage('');
@@ -70,6 +73,7 @@ export default function Payment() {
             setMessage('Enter the online payment reference number to continue.');
             return;
         }
+
 
         const transactionId = createTransactionId(pendingOrder.orderNumber);
         const amountTendered = roundMoney(tendered);
@@ -105,6 +109,7 @@ export default function Payment() {
         } finally {
             setProcessingPayment(false);
         }
+
     }
 
     function finishReceipt() {
@@ -147,6 +152,7 @@ export default function Payment() {
             setDownloadingReceipt(false);
         }
     }
+
 
     if (!pendingOrder && !receipt) {
         return (
@@ -210,6 +216,7 @@ export default function Payment() {
                     </View>
                 ) : null}
 
+
                 <View style={styles.amountPanel}>
                     <View style={styles.amountRow}>
                         <Text style={styles.amountLabel}>TOTAL DUE</Text>
@@ -258,11 +265,13 @@ export default function Payment() {
 
                 <Pressable
                     disabled={!canPay || processingPayment}
+
                     onPress={confirmPayment}
                     style={[styles.actionButton, !canPay && styles.actionButtonDisabled]}
                 >
                     <Text style={styles.actionButtonText}>
                         {processingPayment ? 'PROCESSING...' : isCash && !canPay && amountText ? 'AMOUNT IS NOT ENOUGH' : `CONFIRM ${paymentMethod.toUpperCase()} PAYMENT`}
+
                     </Text>
                 </Pressable>
             </ScrollView>
@@ -276,6 +285,7 @@ export default function Payment() {
                                 <Text style={styles.receiptSub}>Payment received</Text>
                                 {receipt.syncWarning ? <Text style={styles.message}>{receipt.syncWarning}</Text> : null}
 
+
                                 <View style={styles.receiptDivider} />
 
                                 <ReceiptRow label="Transaction ID" value={receipt.transactionId} stacked />
@@ -286,11 +296,13 @@ export default function Payment() {
                                     <ReceiptRow label="Online payment reference" value={receipt.onlineReference} stacked />
                                 ) : null}
 
+
                                 <View style={styles.receiptDivider} />
 
                                 {receipt.items.map((item) => (
                                     <View key={item.lineId || item.id} style={styles.receiptItem}>
                                         <Text style={styles.receiptItemName}>{item.quantity}x {item.name}{item.size ? ` · ${item.size}` : ''}</Text>
+
                                         <Text style={styles.receiptItemTotal}>{formatMoney(item.lineTotal)}</Text>
                                     </View>
                                 ))}
@@ -317,6 +329,7 @@ export default function Payment() {
                             style={[styles.secondaryButton, downloadingReceipt && styles.actionButtonDisabled]}
                         >
                             <Text style={styles.secondaryButtonText}>{downloadingReceipt ? 'PREPARING RECEIPT...' : 'DOWNLOAD RECEIPT'}</Text>
+
                         </Pressable>
                     </View>
                 </View>
@@ -437,6 +450,7 @@ function buildReceiptHtml(receipt) {
 </html>`;
 }
 
+
 const colors = {
     background: '#F6F2EC',
     ink: '#25170E',
@@ -449,6 +463,7 @@ const colors = {
 };
 
 const styles = StyleSheet.create(scaleTabletTypography({
+
     safeArea: { backgroundColor: colors.background, flex: 1 },
     content: { padding: 24, paddingBottom: 42 },
     topBar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 22 },
@@ -456,6 +471,7 @@ const styles = StyleSheet.create(scaleTabletTypography({
     subtitle: { color: colors.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
     closeButton: { alignItems: 'center', borderColor: colors.border, borderRadius: 18, borderWidth: 1, height: 36, justifyContent: 'center', width: 36 },
     closeButtonText: { color: colors.ink, fontSize: 15, fontWeight: '800' },
+
 
     paymentGrid: { flexDirection: 'row', gap: 10 },
     paymentOption: { backgroundColor: colors.panel, borderColor: colors.border, borderRadius: 8, borderWidth: 1, flex: 1, minHeight: 78, padding: 14 },
@@ -467,6 +483,7 @@ const styles = StyleSheet.create(scaleTabletTypography({
     referenceField: { marginTop: 18 },
     referenceLabel: { color: colors.terracotta, fontSize: 10, fontWeight: '800', letterSpacing: 1.2, marginBottom: 8 },
     referenceInput: { backgroundColor: colors.panel, borderColor: colors.border, borderRadius: 6, borderWidth: 1, color: colors.ink, fontSize: 16, minHeight: 48, paddingHorizontal: 14, paddingVertical: 10 },
+
 
     amountPanel: { backgroundColor: colors.panel, borderColor: colors.border, borderRadius: 9, borderWidth: 1, marginTop: 18, paddingHorizontal: 18 },
     amountRow: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 14 },

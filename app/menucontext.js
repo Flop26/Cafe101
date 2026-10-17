@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import {
   authenticateUser,
+
 	createCategoryApi,
 	databaseEnabled,
 	loadCafeState,
 	loadCategories,
 	loadSpillageInventory,
+
 	removeCategoryApi,
 	removeInventoryItem,
 	removeMenuItem,
@@ -14,6 +16,7 @@ import {
 	saveOrder,
 	saveSpillageLog,
 	setAuthToken,
+
 	updateCategoryApi,
 } from './api';
 import { getUnitPrice } from '../utils/pricing';
@@ -153,6 +156,7 @@ export function MenuProvider({ children }) {
 	const [inventoryItems, setInventoryItems] = useState(initialInventoryItems);
 	const [categories, setCategories] = useState(initialCategories);
 	const [user, setUser] = useState(null);
+
 	const [pendingOrder, setPendingOrder] = useState(null);
 	const [lastCompletedOrder, setLastCompletedOrder] = useState(null);
 	const [completedOrders, setCompletedOrders] = useState([]);
@@ -161,6 +165,7 @@ export function MenuProvider({ children }) {
 
 	useEffect(() => {
 		if (!databaseEnabled || !user) return;
+
 
 		loadCafeState()
 			.then((state) => {
@@ -193,6 +198,7 @@ export function MenuProvider({ children }) {
 		setUser(null);
 		setPendingOrder(null);
 	}
+
 
 	// ---- Menu items ----
 	// Server first. The server may assign its own id, so we keep the id it returns;
@@ -389,6 +395,7 @@ export function MenuProvider({ children }) {
 		setInventoryItems(items);
 	}, []);
 
+
 	// ---- Orders ----
 	function completeOrder(cart) {
 		const requirements = buildOrderRequirements(menuItems, cart);
@@ -443,6 +450,7 @@ export function MenuProvider({ children }) {
 
 	// `extra` carries payment details from the payment screen (transactionId, amountTendered, change)
 	async function completePendingOrder(paymentMethod, extra = {}) {
+
 		if (!pendingOrder) return { completed: false, message: 'No order is ready for payment.' };
 
 		const result = completeOrder(pendingOrder.cart);
@@ -497,6 +505,7 @@ export function MenuProvider({ children }) {
 			deleteInventoryItem,
 			updateInventoryStock,
 			refreshSpillageInventory,
+
 			logSpillage,
 			completeOrder,
 			createPendingOrder,
@@ -585,6 +594,7 @@ function buildPendingOrder(menuItems, cart, orderSequence) {
 			if (!item) return null;
 			const quantity = Number.parseFloat(line.quantity || 0);
 			const customization = line.customization || {};
+
 			// Price follows the chosen size (missing size = base price)
 			const unitPrice = getUnitPrice(item, customization);
 
@@ -599,6 +609,7 @@ function buildPendingOrder(menuItems, cart, orderSequence) {
 				quantity,
 				lineTotal: roundStock(unitPrice * quantity),
 				note: line.note || '',
+
 				customization,
 				ingredients: item.ingredients || [],
 			};

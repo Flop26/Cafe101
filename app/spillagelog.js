@@ -7,6 +7,7 @@ import { scaleTabletTypography } from '../utils/typography';
 
 export default function SpillageLog() {
 	const { inventoryItems = [], logSpillage, refreshSpillageInventory } = useMenu();
+
 	const { width: screenWidth } = useWindowDimensions();
 	const columnCount = screenWidth >= 960 ? 3 : screenWidth >= 640 ? 2 : 1;
 	const itemWidth = (screenWidth - 48 - (columnCount - 1) * 8) / columnCount;
@@ -27,6 +28,7 @@ export default function SpillageLog() {
 			setError(loadError.message || 'Could not load inventory.');
 		});
 	}, [refreshSpillageInventory]);
+
 
 	async function submitSpillage() {
 		setError('');
@@ -58,6 +60,7 @@ export default function SpillageLog() {
 		<SafeAreaView style={styles.safeArea}>
 			<StatusBar style="dark" />
 			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardAvoiding}>
+
 			<View style={styles.header}>
 				<Pressable onPress={() => router.back()} style={styles.backButton}>
 					<Text style={styles.backButtonText}>{'<'}  Back</Text>
@@ -65,6 +68,7 @@ export default function SpillageLog() {
 			</View>
 			<View style={styles.titleBlock}>
 				<Text style={styles.title}>Waste Log</Text>
+
 			</View>
 			<ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 				<Text style={styles.fieldLabel}>INVENTORY ITEM</Text>
@@ -111,6 +115,7 @@ export default function SpillageLog() {
 				</Pressable>
 			</ScrollView>
 			</KeyboardAvoidingView>
+
 		</SafeAreaView>
 	);
 }
@@ -129,6 +134,7 @@ const colors = {
 const styles = StyleSheet.create(scaleTabletTypography({
 	safeArea: { backgroundColor: colors.background, flex: 1 },
 	keyboardAvoiding: { flex: 1 },
+
 	header: { paddingHorizontal: 24, paddingTop: 18 },
 	backButton: { alignItems: 'center', alignSelf: 'flex-start', borderColor: colors.border, borderRadius: 8, borderWidth: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 18 },
 	backButtonText: { color: colors.ink, fontSize: 16, fontWeight: '800' },

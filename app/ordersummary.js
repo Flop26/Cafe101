@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useMenu } from './menucontext';
 import { scaleTabletTypography } from '../utils/typography';
 
+
 export default function OrderSummary() {
 	const { pendingOrder } = useMenu();
 
