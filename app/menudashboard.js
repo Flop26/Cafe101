@@ -107,6 +107,10 @@ export default function MenuDashboard() {
 		() => [...inventoryItems].sort((a, b) => a.name.localeCompare(b.name)),
 		[inventoryItems],
 	);
+	const outOfStockItems = sortedInventoryItems.filter((item) => Number(item.quantity) <= 0);
+	const lowStockItems = sortedInventoryItems.filter((item) => (
+		Number(item.quantity) > 0 && Number(item.quantity) <= Number(item.reorderPoint)
+	));
 
 	const orderItems = Object.entries(cart)
 		.map(([cartKey, line]) => {
@@ -254,7 +258,6 @@ export default function MenuDashboard() {
 	}
 
 	const selectedItem = menuItems.find((item) => item.id === selectedItemId);
-	const canAddSelectedItem = selectedItem ? canMakeItem(selectedItem, getItemQuantity(selectedItem.id) + 1) : false;
 
 	function updateCustomization(key, value) {
 		setEditCustomization((currentCustomization) => ({ ...currentCustomization, [key]: value }));
@@ -482,6 +485,19 @@ export default function MenuDashboard() {
 									<Text style={styles.inventorySummaryValue}>{sortedInventoryItems.length}</Text>
 									<Text style={styles.inventorySummaryLabel}>TRACKED INGREDIENTS</Text>
 								</View>
+								{outOfStockItems.length || lowStockItems.length ? (
+									<View style={styles.inventoryWarning} accessibilityRole="alert">
+										<Text style={styles.inventoryWarningTitle}>Inventory needs attention</Text>
+										<Text style={styles.inventoryWarningMessage}>
+											{outOfStockItems.length ? `${outOfStockItems.length} out of stock` : ''}
+											{outOfStockItems.length && lowStockItems.length ? ' · ' : ''}
+											{lowStockItems.length ? `${lowStockItems.length} low stock` : ''}
+										</Text>
+										<Text style={styles.inventoryWarningItems}>
+											{[...outOfStockItems, ...lowStockItems].map((item) => item.name).join(', ')}
+										</Text>
+									</View>
+								) : null}
 								<View style={styles.inventoryActions}>
 									{user?.role === 'admin' ? <Pressable
 										onPress={() => { setStaffPanel(null); router.push('/modifyinventory'); }}
@@ -865,7 +881,6 @@ const styles = StyleSheet.create(scaleTabletTypography({
 
 	// Sidebar
 	sidebar: { backgroundColor: colors.sidebar, borderRightColor: colors.border, borderRightWidth: 1, paddingHorizontal: 18, paddingTop: 26, width: 176 },
-	brand: { color: colors.ink, fontSize: 19, fontWeight: '800', marginBottom: 30 },
 	navList: { gap: 4 },
 	navItem: { alignItems: 'center', borderRadius: 8, flexDirection: 'row', gap: 10, paddingHorizontal: 10, paddingVertical: 11 },
 	navItemActive: { backgroundColor: '#F1F4FE' },
@@ -919,10 +934,6 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	sizeText: { color: colors.ink, fontSize: 10, fontWeight: '800' },
 	sizeTextActive: { color: '#FFFFFF' },
 	countButtonsWrap: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-	countButton: { alignItems: 'center', backgroundColor: '#F1EFEA', borderRadius: 8, height: 26, justifyContent: 'center', width: 26 },
-	countButtonDisabled: { opacity: 0.4 },
-	countText: { color: colors.ink, fontSize: 15, fontWeight: '700', lineHeight: 15 },
-	countValue: { color: colors.ink, fontSize: 12, fontWeight: '800', minWidth: 14, textAlign: 'center' },
 	addButton: { alignItems: 'center', backgroundColor: colors.ink, borderRadius: 8, justifyContent: 'center', marginTop: 'auto', minHeight: 34 },
 	addButtonDisabled: { backgroundColor: '#C7C1B8' },
 	addButtonText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
@@ -952,9 +963,8 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	placeOrderButton: { alignItems: 'center', backgroundColor: colors.ink, borderRadius: 12, justifyContent: 'center', marginTop: 14, minHeight: 52 },
 	placeOrderButtonDisabled: { backgroundColor: '#C7C1B8' },
 	placeOrderText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-
 	// Shared modal styles (staff actions, inventory/sales, item editor)
-	sectionLabel: { color: colors.accent, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 7 },
+	// Shared modal styles (staff actions, inventory/sales, item editor)
 	modalBackdrop: { backgroundColor: 'rgba(31, 29, 27, 0.55)', flex: 1, justifyContent: 'flex-end' },
 	editorSheet: { backgroundColor: colors.panel, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 24, paddingBottom: 34 },
 	reportSheet: { backgroundColor: colors.panel, borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '86%', padding: 24, paddingBottom: 34 },
@@ -962,8 +972,6 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	inventoryGridRow: { gap: 12 },
 	salesReportScroll: { flexShrink: 1 },
 	salesReportContent: { paddingBottom: 4 },
-	reportRow: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', paddingVertical: 15 },
-	reportName: { color: colors.ink, flex: 1, fontSize: 20, fontWeight: '700' },
 	reportQuantity: { color: colors.muted, fontSize: 15, fontWeight: '700', marginLeft: 10 },
 	reportStatus: { color: '#3F8A5E', fontSize: 15, fontWeight: '800', marginLeft: 12 },
 	lowStock: { color: '#C08A3F' },
@@ -971,21 +979,19 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	inventorySummary: { backgroundColor: '#b0b18b', borderRadius: 10, marginBottom: 8, padding: 16 },
 	inventorySummaryValue: { color: colors.ink, fontSize: 30, fontWeight: '800' },
 	inventorySummaryLabel: { color: colors.ink, fontSize: 10, fontWeight: '800', letterSpacing: 1.3, marginTop: 4 },
+	inventoryWarning: { backgroundColor: '#F8E8E4', borderColor: '#E8BEB5', borderRadius: 9, borderWidth: 1, marginBottom: 12, padding: 14 },
+	inventoryWarningTitle: { color: '#A33F32', fontSize: 14, fontWeight: '800' },
+	inventoryWarningMessage: { color: '#A33F32', fontSize: 12, fontWeight: '700', marginTop: 4 },
+	inventoryWarningItems: { color: colors.ink, fontSize: 12, lineHeight: 18, marginTop: 4 },
 	inventoryRow: { backgroundColor: '#FAFAF8', borderBottomColor: colors.border, borderBottomWidth: 1, flex: 1, marginBottom: 8, minWidth: 0, padding: 12 },
 	inventoryGridName: { color: colors.ink, fontSize: 14, fontWeight: '700' },
 	inventoryTopRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 10 },
 	inventoryNameBlock: { flex: 1 },
-	inventoryMeta: { color: colors.muted, fontSize: 11, marginTop: 4 },
 	inventoryBottomRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
 	inventoryActions: { flexDirection: 'row', gap: 8, marginBottom: 12 },
 	modifyStockButton: { alignItems: 'center', backgroundColor: colors.ink, borderRadius: 10, flex: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 },
 	modifyStockButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-	salesTotal: { backgroundColor: '#F1F4FE', borderRadius: 10, marginBottom: 8, padding: 16 },
-	salesTotalLabel: { color: colors.accent, fontSize: 10, fontWeight: '800', letterSpacing: 1.3 },
-	salesTotalValue: { color: colors.ink, fontSize: 30, fontWeight: '800', marginTop: 6 },
-	demoReportNote: { color: colors.muted, fontSize: 12, marginTop: 20 },
 	salesToolbar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-	salesSource: { color: '#47736D', fontSize: 9, fontWeight: '800', letterSpacing: 1 },
 	salesPeriods: { backgroundColor: '#F2F1EE', borderRadius: 7, flexDirection: 'row', overflow: 'hidden', padding: 3, position: 'relative' },
 	salesPeriodIndicator: { backgroundColor: '#FFFFFF', borderRadius: 5, bottom: 3, left: 3, position: 'absolute', top: 3 },
 	salesPeriod: { alignItems: 'center', borderRadius: 5, flex: 1, justifyContent: 'center', paddingHorizontal: 9, paddingVertical: 7, zIndex: 1 },
@@ -1031,11 +1037,6 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	closeButton: { alignItems: 'center', borderColor: colors.border, borderRadius: 18, borderWidth: 1, height: 36, justifyContent: 'center', width: 36 },
 	closeButtonText: { color: colors.ink, fontSize: 15, fontWeight: '800' },
 	editorLabel: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.4, marginBottom: 10, marginTop: 8 },
-	editorQuantityRow: { alignItems: 'center', flexDirection: 'row', marginBottom: 18 },
-	editorQuantityButton: { alignItems: 'center', backgroundColor: colors.ink, borderRadius: 18, height: 36, justifyContent: 'center', width: 36 },
-	editorQuantityButtonDisabled: { backgroundColor: '#C7C1B8' },
-	editorQuantityText: { color: '#FFFFFF', fontSize: 21, lineHeight: 23 },
-	editorQuantity: { color: colors.ink, fontSize: 20, fontWeight: '800', marginHorizontal: 18 },
 	noteInput: { backgroundColor: '#F7F6F4', borderColor: colors.border, borderRadius: 8, borderWidth: 1, color: colors.ink, fontSize: 14, minHeight: 76, padding: 12, textAlignVertical: 'top' },
 	editorActions: { flexDirection: 'row', gap: 10, marginTop: 22 },
 	removeButton: { alignItems: 'center', borderColor: '#C0503F', borderRadius: 8, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 50 },

@@ -11,7 +11,6 @@ export default function CurrentOrders() {
 		completedOrders = [],
 		completedKitchenOrderIds = [],
 		completeKitchenOrder: completeLocalKitchenOrder,
-		user,
 	} = useMenu();
 	const { width } = useWindowDimensions();
 	const [sharedOrders, setSharedOrders] = useState([]);
@@ -92,7 +91,7 @@ export default function CurrentOrders() {
 					onPress={() => router.push('/spillagelog')}
 					style={[styles.spillageButton, width < 520 && styles.mobileSpillageButton]}
 				>
-					<Text style={styles.spillageButtonText}>LOG SPILLAGE</Text>
+					<Text style={styles.spillageButtonText}>LOG WASTE</Text>
 				</Pressable>
 			</View>
 			{syncError ? <Text style={styles.syncError}>{syncError}</Text> : null}
@@ -117,7 +116,7 @@ export default function CurrentOrders() {
 	);
 }
 
-function OrderLane({ title, statusLabel, orders, numColumns, emptyMessage, actionLabel, onComplete, updatingOrderId }) {
+function OrderLane({ title, orders, numColumns, emptyMessage, actionLabel, onComplete, updatingOrderId }) {
 	return (
 		<View style={styles.lane}>
 			<View style={styles.laneHeader}>
@@ -139,7 +138,6 @@ function OrderLane({ title, statusLabel, orders, numColumns, emptyMessage, actio
 								<Text style={styles.orderNumber}>{order.orderNumber}</Text>
 								<Text style={styles.orderMeta}>{formatOrderTime(order.paidAt || order.createdAt)}</Text>
 							</View>
-							<Text style={styles.status}>{statusLabel}</Text>
 						</View>
 
 						<View style={styles.itemList}>
@@ -184,7 +182,6 @@ const colors = {
 	terracotta: '#6D5236',
 	border: '#DED6CB',
 	panel: '#FFFDF9',
-	success: '#2E7D4F',
 };
 
 const styles = StyleSheet.create(scaleTabletTypography({
@@ -196,7 +193,6 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	spillageButtonText: { color: '#FFF9F1', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
 	titleBlock: { paddingHorizontal: 24, paddingTop: 22 },
 	titleHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-	eyebrow: { color: colors.terracotta, fontSize: 11, fontWeight: '800', letterSpacing: 1.5 },
 	title: { color: colors.ink, flex: 1, fontSize: 30, fontWeight: '800', marginRight: 12 },
 	subtitle: { color: colors.muted, fontSize: 14, marginTop: 5 },
 	syncError: { color: '#A33F32', fontSize: 13, marginHorizontal: 24, marginTop: 10 },
@@ -212,7 +208,6 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	orderHeader: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 12 },
 	orderNumber: { color: colors.ink, fontSize: 20, fontWeight: '800' },
 	orderMeta: { color: colors.muted, fontSize: 12, marginTop: 3 },
-	status: { color: colors.success, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
 	itemList: { gap: 10, paddingTop: 12 },
 	orderItem: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
 	itemDescription: { flex: 1, paddingRight: 10 },

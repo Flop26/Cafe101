@@ -140,7 +140,6 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	backButtonText: { color: colors.ink, fontSize: 16, fontWeight: '800' },
 	titleBlock: { paddingHorizontal: 24, paddingTop: 18 },
 	title: { color: colors.ink, fontSize: 30, fontWeight: '800' },
-	subtitle: { color: colors.muted, fontSize: 14, lineHeight: 20, marginTop: 4 },
 	content: { padding: 24, paddingTop: 14 },
 	fieldLabel: { color: colors.terracotta, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 8, marginTop: 18 },
 	itemList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

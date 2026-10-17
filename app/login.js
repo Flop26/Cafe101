@@ -239,23 +239,6 @@ const styles = StyleSheet.create(scaleTabletTypography({
 		fontSize: 13,
 		marginBottom: 16,
 	},
-	demoAccount: {
-		backgroundColor: '#EEE7DC',
-		borderRadius: 6,
-		marginBottom: 18,
-		padding: 12,
-	},
-	demoLabel: {
-		color: colors.terracotta,
-		fontSize: 10,
-		fontWeight: '800',
-		letterSpacing: 1.2,
-		marginBottom: 5,
-	},
-	demoCredentials: {
-		color: '#6F6B64',
-		fontSize: 12,
-	},
 	loginButton: {
 		alignItems: 'center',
 		backgroundColor: '#6D5236',
@@ -286,11 +269,5 @@ const styles = StyleSheet.create(scaleTabletTypography({
 		backgroundColor: colors.border,
 		flex: 1,
 		height: 1,
-	},
-	footerText: {
-		color: colors.muted,
-		fontSize: 10,
-		fontWeight: '800',
-		letterSpacing: 1.2,
 	},
 }));

@@ -10,7 +10,7 @@ The Expo app talks to the MySQL database through the API in `server/`; never con
 
    For an existing database, apply `server/migration_category_size_options.sql` once to add category-level size settings. The migration also enables the existing Coffee and Sodas size behavior.
 
-2. Create `server/.env` from `server/.env.example` and set the MySQL password.
+2. Create `server/.env` from `server/.env.example` and set the MySQL password. Add a stable `AUTH_SECRET` value there as well so logins remain valid across server restarts.
 
 3. Install and start the API:
 

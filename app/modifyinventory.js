@@ -23,6 +23,10 @@ export default function ModifyInventory() {
 		() => [...(inventoryItems || [])].sort((a, b) => a.name.localeCompare(b.name)),
 		[inventoryItems],
 	);
+	const outOfStockItems = sortedItems.filter((item) => Number(item.quantity) <= 0);
+	const lowStockItems = sortedItems.filter((item) => (
+		Number(item.quantity) > 0 && Number(item.quantity) <= Number(item.reorderPoint)
+	));
 
 	// Which menu items use each inventory item (matched by name + unit, same as menucontext)
 
@@ -146,6 +150,20 @@ export default function ModifyInventory() {
 				<Text style={styles.title}>Modify Inventory</Text>
 			</View>
 
+			{outOfStockItems.length || lowStockItems.length ? (
+				<View style={styles.warningBanner} accessibilityRole="alert">
+					<Text style={styles.warningTitle}>Inventory needs attention</Text>
+					<Text style={styles.warningMessage}>
+						{outOfStockItems.length ? `${outOfStockItems.length} out of stock` : ''}
+						{outOfStockItems.length && lowStockItems.length ? ' · ' : ''}
+						{lowStockItems.length ? `${lowStockItems.length} low stock` : ''}
+					</Text>
+					<Text style={styles.warningItems}>
+						{[...outOfStockItems, ...lowStockItems].map((item) => item.name).join(', ')}
+					</Text>
+				</View>
+			) : null}
+
 			<FlatList
 				columnWrapperStyle={styles.inventoryGridRow}
 				contentContainerStyle={styles.list}
@@ -154,7 +172,8 @@ export default function ModifyInventory() {
 				ListEmptyComponent={<Text style={styles.emptyState}>No inventory items yet. Tap "+ Add Item" to create one.</Text>}
 				numColumns={2}
 				renderItem={({ item }) => {
-					const low = item.quantity <= item.reorderPoint;
+					const out = Number(item.quantity) <= 0;
+					const low = !out && Number(item.quantity) <= Number(item.reorderPoint);
 
 					return (
 						<View style={styles.card}>
@@ -168,7 +187,11 @@ export default function ModifyInventory() {
 									<Text style={styles.stockUnit}>{item.unit}</Text>
 								</View>
 							</View>
-							{low ? <Text style={styles.lowBadge}>LOW STOCK</Text> : null}
+							{out || low ? (
+								<Text style={[styles.lowBadge, out && styles.outBadge]}>
+									{out ? 'OUT OF STOCK' : 'LOW STOCK'}
+								</Text>
+							) : null}
 							<View style={styles.cardActions}>
 								<Pressable onPress={() => openStockForm(item)} style={styles.stockButton}>
 									<Text style={styles.stockButtonText}>SET STOCK</Text>
@@ -309,42 +332,6 @@ export default function ModifyInventory() {
 				</KeyboardAvoidingView>
 			</Modal>
 
-			{/* Set exact stock */}
-			<Modal animationType="fade" transparent visible={Boolean(stockItemId)} onRequestClose={closeStockForm}>
-				<View style={styles.confirmBackdrop}>
-					<View style={styles.confirmCard}>
-						<Text style={styles.confirmTitle}>Set stock for {stockTarget?.name}</Text>
-						<Text style={styles.confirmBody}>Type the exact amount you have on hand. This replaces the current count.</Text>
-
-						<Text style={styles.fieldLabel}>STOCK ON HAND ({stockTarget?.unit})</Text>
-						<TextInput
-							autoFocus
-							keyboardType="decimal-pad"
-							onChangeText={(value) => {
-								setStockText(value);
-								setStockError('');
-							}}
-							onSubmitEditing={saveStock}
-							placeholder="0"
-							placeholderTextColor={colors.muted}
-							selectTextOnFocus
-							style={styles.fieldInput}
-							value={stockText}
-						/>
-						{stockError ? <Text style={styles.formErrorText}>{stockError}</Text> : null}
-
-						<View style={styles.confirmActions}>
-							<Pressable onPress={closeStockForm} style={styles.confirmCancel}>
-								<Text style={styles.confirmCancelText}>Cancel</Text>
-							</Pressable>
-							<Pressable onPress={saveStock} style={styles.confirmPrimary}>
-								<Text style={styles.confirmPrimaryText}>Save</Text>
-							</Pressable>
-						</View>
-					</View>
-				</View>
-			</Modal>
-
 			{/* Delete confirmation */}
 			<Modal animationType="fade" transparent visible={Boolean(confirmDeleteId)} onRequestClose={() => setConfirmDeleteId(null)}>
 				<View style={styles.confirmBackdrop}>
@@ -407,7 +394,10 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	addButtonText: { color: '#FFF9F1', fontSize: 11, fontWeight: '800', letterSpacing: 1.1 },
 	titleBlock: { paddingHorizontal: 24, paddingTop: 14 },
 	title: { color: colors.ink, fontSize: 30, fontWeight: '800' },
-	subtitle: { color: colors.muted, fontSize: 13, marginTop: 4 },
+	warningBanner: { backgroundColor: '#F8E8E4', borderColor: '#E8BEB5', borderRadius: 9, borderWidth: 1, marginHorizontal: 24, marginTop: 14, padding: 14 },
+	warningTitle: { color: colors.danger, fontSize: 14, fontWeight: '800' },
+	warningMessage: { color: colors.danger, fontSize: 12, fontWeight: '700', marginTop: 4 },
+	warningItems: { color: colors.ink, fontSize: 12, lineHeight: 18, marginTop: 4 },
 	list: { padding: 24, paddingTop: 18 },
 	inventoryGridRow: { gap: 12 },
 	emptyState: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingVertical: 30, textAlign: 'center' },
@@ -416,12 +406,12 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	cardTop: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
 	cardNameBlock: { flex: 1, gap: 4, paddingRight: 12 },
 	cardName: { color: colors.ink, fontSize: 15, fontWeight: '800' },
-	cardMeta: { color: colors.muted, fontSize: 11, lineHeight: 16 },
 	stockBlock: { alignItems: 'flex-end' },
 	stockValue: { color: colors.ink, fontSize: 24, fontWeight: '800' },
 	stockValueLow: { color: colors.danger },
 	stockUnit: { color: colors.muted, fontSize: 11, fontWeight: '700' },
 	lowBadge: { color: colors.danger, fontSize: 10, fontWeight: '800', letterSpacing: 1.4, marginBottom: 12 },
+	outBadge: { color: '#7B241C' },
 	cardActions: { flexDirection: 'row', gap: 10 },
 	stockButton: { alignItems: 'center', backgroundColor: colors.terracotta, borderRadius: 6, flex: 1, justifyContent: 'center', minHeight: 42 },
 	stockButtonText: { color: '#FFF9F1', fontSize: 11, fontWeight: '800', letterSpacing: 1.1 },

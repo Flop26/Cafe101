@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import cors from 'cors';
 import express from 'express';
 import mysql from 'mysql2/promise';
@@ -13,7 +15,32 @@ const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction && (!process.env.AUTH_SECRET || !process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD || !process.env.EMPLOYEE_USERNAME || !process.env.EMPLOYEE_PASSWORD)) {
   throw new Error('Production requires AUTH_SECRET and credentials for both staff roles.');
 }
-const authSecret = process.env.AUTH_SECRET || randomBytes(32).toString('hex');
+function resolveAuthSecret() {
+  if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
+
+  const serverRoot = fs.existsSync(path.join(process.cwd(), 'server', 'index.js'))
+    ? path.join(process.cwd(), 'server')
+    : process.cwd();
+  const envFilePath = path.join(serverRoot, '.env');
+  const secretFilePath = path.join(serverRoot, '.auth_secret');
+
+  if (fs.existsSync(envFilePath)) {
+    const envContents = fs.readFileSync(envFilePath, 'utf8');
+    const envMatch = envContents.match(/(?:^|\n)AUTH_SECRET\s*=\s*["']?([^"\r\n]+)["']?(?:\r?\n|$)/);
+    if (envMatch && envMatch[1]?.trim()) return envMatch[1].trim();
+  }
+
+  if (fs.existsSync(secretFilePath)) {
+    const storedSecret = fs.readFileSync(secretFilePath, 'utf8').trim();
+    if (storedSecret) return storedSecret;
+  }
+
+  const generatedSecret = randomBytes(32).toString('hex');
+  fs.writeFileSync(secretFilePath, generatedSecret, 'utf8');
+  return generatedSecret;
+}
+
+const authSecret = resolveAuthSecret();
 const staffAccounts = [
   { username: process.env.ADMIN_USERNAME || (isProduction ? '' : 'admin'), password: process.env.ADMIN_PASSWORD || (isProduction ? '' : 'admin101'), role: 'admin' },
   { username: process.env.EMPLOYEE_USERNAME || (isProduction ? '' : 'employee'), password: process.env.EMPLOYEE_PASSWORD || (isProduction ? '' : 'cafe101'), role: 'employee' },
