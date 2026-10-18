@@ -15,6 +15,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction && (!process.env.AUTH_SECRET || !process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD || !process.env.EMPLOYEE_USERNAME || !process.env.EMPLOYEE_PASSWORD)) {
   throw new Error('Production requires AUTH_SECRET and credentials for both staff roles.');
 }
+if (isProduction && !process.env.DB_SSL_CA_BASE64) {
+  throw new Error('Production requires DB_SSL_CA_BASE64 to verify the database TLS certificate.');
+}
 function resolveAuthSecret() {
   if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
 
@@ -46,12 +49,23 @@ const staffAccounts = [
   { username: process.env.EMPLOYEE_USERNAME || (isProduction ? '' : 'employee'), password: process.env.EMPLOYEE_PASSWORD || (isProduction ? '' : 'cafe101'), role: 'employee' },
 ];
 
+const databaseSsl = process.env.DB_SSL_CA_BASE64
+  ? {
+      ca: Buffer.from(process.env.DB_SSL_CA_BASE64, 'base64').toString('utf8'),
+      rejectUnauthorized: true,
+    }
+  : undefined;
+if (databaseSsl && !databaseSsl.ca.includes('-----BEGIN CERTIFICATE-----')) {
+  throw new Error('DB_SSL_CA_BASE64 must contain a base64-encoded PEM CA certificate.');
+}
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  ssl: databaseSsl,
   waitForConnections: true,
   connectionLimit: 10,
 });
