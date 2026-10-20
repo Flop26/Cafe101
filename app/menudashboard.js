@@ -33,7 +33,6 @@ export default function MenuDashboard() {
 	const [selectedItemId, setSelectedItemId] = useState(null);
 	const [selectedCartKey, setSelectedCartKey] = useState(null);
 	const [logoutWarningVisible, setLogoutWarningVisible] = useState(false);
-	const [editNote, setEditNote] = useState('');
 	const [editCustomization, setEditCustomization] = useState({});
 	const [staffPanel, setStaffPanel] = useState(null);
 	const [orderMessage, setOrderMessage] = useState('');
@@ -211,14 +210,12 @@ export default function MenuDashboard() {
 
 		setSelectedItemId(itemId);
 		setSelectedCartKey(key);
-		setEditNote(line?.note || '');
 		setEditCustomization(line?.customization || defaultCustomization);
 	}
 
 	function closeItemEditor() {
 		setSelectedItemId(null);
 		setSelectedCartKey(null);
-		setEditNote('');
 		setEditCustomization({});
 	}
 
@@ -238,7 +235,7 @@ export default function MenuDashboard() {
 					itemId: selectedItemId,
 					quantity: (sourceLine?.quantity || 0) + (selectedCartKey === targetKey ? 0 : targetLine?.quantity || 0),
 					customization: editCustomization,
-					note: editNote.trim(),
+					note: sourceLine?.note || targetLine?.note || '',
 				};
 			}
 			return nextCart;
@@ -744,24 +741,6 @@ export default function MenuDashboard() {
 								</View>
 							</>
 						) : null}
-
-						<Text style={styles.editorLabel}>PREPARATION NOTE</Text>
-						<TextInput
-							multiline
-							onChangeText={setEditNote}
-							placeholderTextColor={colors.muted}
-							style={styles.noteInput}
-							value={editNote}
-						/>
-
-						<View style={styles.editorActions}>
-							<Pressable onPress={removeSelectedItem} style={styles.removeButton}>
-								<Text style={styles.removeButtonText}>REMOVE</Text>
-							</Pressable>
-							<Pressable onPress={saveItemChanges} style={styles.saveButton}>
-								<Text style={styles.saveButtonText}>SAVE CHANGES</Text>
-							</Pressable>
-						</View>
 					</View>
 				</KeyboardAvoidingView>
 			</Modal>
@@ -1037,7 +1016,6 @@ const styles = StyleSheet.create(scaleTabletTypography({
 	closeButton: { alignItems: 'center', borderColor: colors.border, borderRadius: 18, borderWidth: 1, height: 36, justifyContent: 'center', width: 36 },
 	closeButtonText: { color: colors.ink, fontSize: 15, fontWeight: '800' },
 	editorLabel: { color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.4, marginBottom: 10, marginTop: 8 },
-	noteInput: { backgroundColor: '#F7F6F4', borderColor: colors.border, borderRadius: 8, borderWidth: 1, color: colors.ink, fontSize: 14, minHeight: 76, padding: 12, textAlignVertical: 'top' },
 	editorActions: { flexDirection: 'row', gap: 10, marginTop: 22 },
 	removeButton: { alignItems: 'center', borderColor: '#C0503F', borderRadius: 8, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 50 },
 	removeButtonText: { color: '#C0503F', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
